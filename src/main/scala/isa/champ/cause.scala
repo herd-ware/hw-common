@@ -3,7 +3,7 @@
  * Created Date: 2023-02-25 12:54:02 pm                                        *
  * Author: Mathieu Escouteloup                                                 *
  * -----                                                                       *
- * Last Modified: 2023-02-27 05:07:54 pm                                       *
+ * Last Modified: 2023-02-27 05:13:58 pm                                       *
  * Modified By: Mathieu Escouteloup                                            *
  * -----                                                                       *
  * License: See LICENSE.md                                                     *
@@ -13,7 +13,7 @@
  */
 
 
-package herd.common.isa.ceps
+package herd.common.isa.champ
 
 import chisel3._
 import chisel3.util._
