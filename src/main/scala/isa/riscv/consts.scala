@@ -1,10 +1,10 @@
 /*
- * File: csr.scala                                                             *
+ * File: consts.scala
  * Created Date: 2023-02-25 12:54:02 pm                                        *
  * Author: Mathieu Escouteloup                                                 *
  * -----                                                                       *
- * Last Modified: 2023-02-25 09:26:01 pm                                       *
- * Modified By: Mathieu Escouteloup                                            *
+ * Last Modified: 2023-02-28 10:29:58 pm
+ * Modified By: Mathieu Escouteloup
  * -----                                                                       *
  * License: See LICENSE.md                                                     *
  * Copyright (c) 2023 HerdWare                                                *
@@ -13,30 +13,29 @@
  */
 
 
-package herd.common.isa.base
+package herd.common.isa.riscv
 
 import chisel3._
 import chisel3.util._
 
 
 // ******************************
-//            ADDRESS
+//            REGISTERS
 // ******************************
-object CSR {
-  def CYCLE     = "hc00"
-  def TIME      = "hc01"
-  def INSTRET   = "hc02"
-  
-  def CYCLEH    = "hc80"
-  def TIMEH     = "hc81"
-  def INSTRETH  = "hc82"
+object REG {
+  // ------------------------------
+  //              GPR
+  // ------------------------------
+  val X0 = "b00000"
+  val X1 = "b00001"
+  val X5 = "b00101"
 }
 
 // ******************************
-//           REGISTERS
+//            CSR
 // ******************************
-class CsrBus extends Bundle {
-  val cycle     = UInt(64.W)
-  val time      = UInt(64.W)
-  val instret   = UInt(64.W)
+object CBIE {
+  def ILL   = 0.U(2.W)
+  def FLUSH = 1.U(2.W)
+  def INV   = 3.U(2.W)
 }

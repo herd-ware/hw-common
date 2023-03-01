@@ -1,10 +1,10 @@
 /*
- * File: instr.scala                                                           *
+ * File: instr.scala
  * Created Date: 2023-02-25 12:54:02 pm                                        *
  * Author: Mathieu Escouteloup                                                 *
  * -----                                                                       *
- * Last Modified: 2023-02-25 09:26:03 pm                                       *
- * Modified By: Mathieu Escouteloup                                            *
+ * Last Modified: 2023-02-28 10:30:04 pm
+ * Modified By: Mathieu Escouteloup
  * -----                                                                       *
  * License: See LICENSE.md                                                     *
  * Copyright (c) 2023 HerdWare                                                *
@@ -13,7 +13,7 @@
  */
 
 
-package herd.common.isa.base
+package herd.common.isa.riscv
 
 import chisel3._
 import chisel3.util._

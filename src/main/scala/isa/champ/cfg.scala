@@ -1,10 +1,10 @@
 /*
- * File: cfg.scala                                                             *
+ * File: cfg.scala
  * Created Date: 2023-02-25 12:54:02 pm                                        *
  * Author: Mathieu Escouteloup                                                 *
  * -----                                                                       *
- * Last Modified: 2023-02-27 05:14:03 pm                                       *
- * Modified By: Mathieu Escouteloup                                            *
+ * Last Modified: 2023-03-01 09:44:14 am
+ * Modified By: Mathieu Escouteloup
  * -----                                                                       *
  * License: See LICENSE.md                                                     *
  * Copyright (c) 2023 HerdWare                                                *
@@ -214,22 +214,22 @@ class DomeCfgBus(p: DomeCfgParams) extends Bundle {
 // ******************************
 //          REGISTER FILE
 // ******************************
-class RegFileBus(nDomeCfg: Int, p: DomeCfgParams) extends Bundle {
-  val cdc = UInt(log2Ceil(nDomeCfg).W)
-  val pdc = UInt(log2Ceil(nDomeCfg).W)
+class RegFileBus(nChampReg: Int, p: DomeCfgParams) extends Bundle {
+  val chf = UInt(log2Ceil(nChampReg).W)
+  val phf = UInt(log2Ceil(nChampReg).W)
   val frv = Bool()
-  val frdc = UInt(log2Ceil(nDomeCfg).W)
-  val dc = Vec(nDomeCfg, new DomeCfgBus(p))
+  val frhf = UInt(log2Ceil(nChampReg).W)
+  val hf = Vec(nChampReg, new DomeCfgBus(p))
 }
 
-class RegFilePtrBus(nDomeCfg: Int, p: DomeCfgParams) extends Bundle {
+class RegFilePtrBus(nChampReg: Int, p: DomeCfgParams) extends Bundle {
   val valid = Bool()
-  val addr = UInt(log2Ceil(nDomeCfg).W)
-  val dc = new DomeCfgBus(p)
+  val addr = UInt(log2Ceil(nChampReg).W)
+  val hf = new DomeCfgBus(p)
 } 
 
-class RegFileStateBus(nDomeCfg: Int, p: DomeCfgParams) extends Bundle {
-  val cur = new RegFilePtrBus(nDomeCfg, p)
-  val prev = new RegFilePtrBus(nDomeCfg, p)
-  val fr = new RegFilePtrBus(nDomeCfg, p)
+class RegFileStateBus(nChampReg: Int, p: DomeCfgParams) extends Bundle {
+  val cur = new RegFilePtrBus(nChampReg, p)
+  val prev = new RegFilePtrBus(nChampReg, p)
+  val fr = new RegFilePtrBus(nChampReg, p)
 }
