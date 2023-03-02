@@ -18,7 +18,7 @@ package herd.common.gen
 import chisel3._
 import chisel3.util._
 
-import herd.common.dome.{SlctBus}
+import herd.common.field.{SlctBus}
 
 
 // ******************************
@@ -36,11 +36,11 @@ class FlatRVBus extends FlatVBus {
 }
 
 // ------------------------------
-//             DOME
+//            FIELD
 // ------------------------------
 
 // ------------------------------
-//          DOME SELECT
+//         FIELD SELECT
 // ------------------------------
 
 // ******************************
@@ -58,33 +58,33 @@ class FlatRVIO extends FlatVIO {
 }
 
 // ------------------------------
-//             DOME
+//            FIELD
 // ------------------------------
-class FlatDIO (useDomeTag: Boolean, nDome: Int, nDomeSlct: Int) extends Bundle {
-  val dome = if (useDomeTag) Some(UInt(log2Ceil(nDome).W)) else None
+class FlatDIO (useFieldTag: Boolean, nField: Int, nFieldSlct: Int) extends Bundle {
+  val field = if (useFieldTag) Some(UInt(log2Ceil(nField).W)) else None
 }
 
-class FlatDVIO (useDomeTag: Boolean, nDome: Int, nDomeSlct: Int) extends FlatDIO(useDomeTag, nDome, nDomeSlct) {
-  val valid = Output(Vec(nDomeSlct, Bool()))
+class FlatDVIO (useFieldTag: Boolean, nField: Int, nFieldSlct: Int) extends FlatDIO(useFieldTag, nField, nFieldSlct) {
+  val valid = Output(Vec(nFieldSlct, Bool()))
 }
 
-class FlatDRVIO (useDomeTag: Boolean, nDome: Int, nDomeSlct: Int) extends FlatDVIO(useDomeTag, nDome, nDomeSlct) {
-  val ready = Input(Vec(nDomeSlct, Bool()))
+class FlatDRVIO (useFieldTag: Boolean, nField: Int, nFieldSlct: Int) extends FlatDVIO(useFieldTag, nField, nFieldSlct) {
+  val ready = Input(Vec(nFieldSlct, Bool()))
 }
 
 // ------------------------------
-//          DOME SELECT
+//         FIELD SELECT
 // ------------------------------
-class FlatSIO (useDomeTag: Boolean, nDome: Int) extends Bundle {
-  val dome = if (useDomeTag) Some(Output(UInt(log2Ceil(nDome).W))) else None  
+class FlatSIO (useFieldTag: Boolean, nField: Int) extends Bundle {
+  val field = if (useFieldTag) Some(Output(UInt(log2Ceil(nField).W))) else None  
 }
 
-class FlatSVIO (useDomeTag: Boolean, nDome: Int) extends FlatVIO {
-  val dome = if (useDomeTag) Some(Output(UInt(log2Ceil(nDome).W))) else None  
+class FlatSVIO (useFieldTag: Boolean, nField: Int) extends FlatVIO {
+  val field = if (useFieldTag) Some(Output(UInt(log2Ceil(nField).W))) else None  
 }
 
-class FlatSRVIO (useDomeTag: Boolean, nDome: Int) extends FlatRVIO {
-  val dome = if (useDomeTag) Some(Output(UInt(log2Ceil(nDome).W))) else None  
+class FlatSRVIO (useFieldTag: Boolean, nField: Int) extends FlatRVIO {
+  val field = if (useFieldTag) Some(Output(UInt(log2Ceil(nField).W))) else None  
 }
 
 // ******************************
@@ -107,35 +107,35 @@ class GenRVBus[TC <: Data, TD <: Data](p: GenParams, tc: TC, td: TD) extends Gen
 }
 
 // ------------------------------
-//             DOME
+//            FIELD
 // ------------------------------
 class GenDBus[TC <: Data, TD <: Data](p: GenParams, tc: TC, td: TD) extends Bundle {
-  val dome = if (p.useDomeTag) Some(UInt(log2Ceil(p.nDome).W)) else None
-  val ctrl = if (tc.getWidth > 0) Some(Vec(p.nDomeSlct, tc)) else None
-  val data = if (td.getWidth > 0) Some(Vec(p.nDomeSlct, td)) else None
+  val field = if (p.useFieldTag) Some(UInt(log2Ceil(p.nField).W)) else None
+  val ctrl = if (tc.getWidth > 0) Some(Vec(p.nFieldSlct, tc)) else None
+  val data = if (td.getWidth > 0) Some(Vec(p.nFieldSlct, td)) else None
 }
 
 class GenDVBus[TC <: Data, TD <: Data](p: GenParams, tc: TC, td: TD) extends GenDBus[TC, TD](p, tc, td) {
-  val valid = Vec(p.nDomeSlct, Bool())
+  val valid = Vec(p.nFieldSlct, Bool())
 }
 
 class GenDRVBus[TC <: Data, TD <: Data](p: GenParams, tc: TC, td: TD) extends GenDVBus[TC, TD](p, tc, td) {
-  val ready = Vec(p.nDomeSlct, Bool())
+  val ready = Vec(p.nFieldSlct, Bool())
 }
 
 // ------------------------------
-//          DOME SELECT
+//         FIELD SELECT
 // ------------------------------
 class GenSBus[TC <: Data, TD <: Data](p: GenParams, tc: TC, td: TD) extends GenBus[TC, TD](p, tc, td) {
-  val dome = if (p.useDome) Some(UInt(log2Ceil(p.nDome).W)) else None
+  val field = if (p.useField) Some(UInt(log2Ceil(p.nField).W)) else None
 }
 
 class GenSVBus[TC <: Data, TD <: Data](p: GenParams, tc: TC, td: TD) extends GenVBus[TC, TD](p, tc, td) {
-  val dome = if (p.useDome) Some(UInt(log2Ceil(p.nDome).W)) else None
+  val field = if (p.useField) Some(UInt(log2Ceil(p.nField).W)) else None
 }
 
 class GenSRVBus[TC <: Data, TD <: Data](p: GenParams, tc: TC, td: TD) extends GenRVBus[TC, TD](p, tc, td) {
-  val dome = if (p.useDome) Some(UInt(log2Ceil(p.nDome).W)) else None
+  val field = if (p.useField) Some(UInt(log2Ceil(p.nField).W)) else None
 }
 
 // ******************************
@@ -157,33 +157,33 @@ class GenRVIO[TC <: Data, TD <: Data](p: GenParams, tc: TC, td: TD) extends GenV
 }
 
 // ------------------------------
-//             DOME
+//            FIELD
 // ------------------------------
 class GenDIO[TC <: Data, TD <: Data](p: GenParams, tc: TC, td: TD) extends Bundle {
-  val dome = if (p.useDomeTag) Some(Output(UInt(log2Ceil(p.nDome).W))) else None  
-  val ctrl = if (tc.getWidth > 0) Some(Output(Vec(p.nDomeSlct, tc))) else None
-  val data = if (td.getWidth > 0) Some(Output(Vec(p.nDomeSlct, td))) else None
+  val field = if (p.useFieldTag) Some(Output(UInt(log2Ceil(p.nField).W))) else None  
+  val ctrl = if (tc.getWidth > 0) Some(Output(Vec(p.nFieldSlct, tc))) else None
+  val data = if (td.getWidth > 0) Some(Output(Vec(p.nFieldSlct, td))) else None
 }
 
 class GenDVIO[TC <: Data, TD <: Data](p: GenParams, tc: TC, td: TD) extends GenDIO[TC, TD](p, tc, td) {
-  val valid = Output(Vec(p.nDomeSlct, Bool()))
+  val valid = Output(Vec(p.nFieldSlct, Bool()))
 }
 
 class GenDRVIO[TC <: Data, TD <: Data](p: GenParams, tc: TC, td: TD) extends GenDVIO[TC, TD](p, tc, td) {
-  val ready = Input(Vec(p.nDomeSlct, Bool()))
+  val ready = Input(Vec(p.nFieldSlct, Bool()))
 }
 
 // ------------------------------
-//          DOME SELECT
+//         FIELD SELECT
 // ------------------------------
 class GenSIO[TC <: Data, TD <: Data](p: GenParams, tc: TC, td: TD) extends GenIO[TC, TD](p, tc, td) {
-  val dome = if (p.useDome) Some(Output(UInt(log2Ceil(p.nDome).W))) else None
+  val field = if (p.useField) Some(Output(UInt(log2Ceil(p.nField).W))) else None
 }
 
 class GenSVIO[TC <: Data, TD <: Data](p: GenParams, tc: TC, td: TD) extends GenVIO[TC, TD](p, tc, td) {
-  val dome = if (p.useDome) Some(Output(UInt(log2Ceil(p.nDome).W))) else None
+  val field = if (p.useField) Some(Output(UInt(log2Ceil(p.nField).W))) else None
 }
 
 class GenSRVIO[TC <: Data, TD <: Data](p: GenParams, tc: TC, td: TD) extends GenRVIO[TC, TD](p, tc, td) {
-  val dome = if (p.useDome) Some(Output(UInt(log2Ceil(p.nDome).W))) else None
+  val field = if (p.useField) Some(Output(UInt(log2Ceil(p.nField).W))) else None
 }

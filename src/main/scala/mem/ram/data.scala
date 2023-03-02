@@ -3,7 +3,7 @@
  * Created Date: 2023-02-25 12:54:02 pm                                        *
  * Author: Mathieu Escouteloup                                                 *
  * -----                                                                       *
- * Last Modified: 2023-02-25 09:39:01 pm                                       *
+ * Last Modified: 2023-03-02 12:09:23 pm                                       *
  * Modified By: Mathieu Escouteloup                                            *
  * -----                                                                       *
  * License: See LICENSE.md                                                     *
@@ -19,7 +19,7 @@ import chisel3._
 import chisel3.util._
 import chisel3.experimental._
 
-import herd.common.dome._
+import herd.common.field._
 import herd.common.mem.mb4s._
 
 
@@ -74,24 +74,24 @@ class DataRamCtrl (p: RamCtrlParams) extends Module {
   require((p.nPort == 1) || (p.nPort == 2), "BRAM has only one or two ports.")
 
   val io = IO(new Bundle {    
-    val i_slct_read = if (p.useDomeSlct) Some(Input(new SlctBus(p.nDome, p.nPart, 1))) else None 
-    val b_read = Vec(p.nPort, new CtrlReadIO(p.useDome, p.nDome, p.nAddrBit, p.nDataByte))
+    val i_slct_read = if (p.useFieldSlct) Some(Input(new SlctBus(p.nField, p.nPart, 1))) else None 
+    val b_read = Vec(p.nPort, new CtrlReadIO(p.useField, p.nField, p.nAddrBit, p.nDataByte))
 
-    val i_slct_write = if (p.useDomeSlct) Some(Input(new SlctBus(p.nDome, p.nPart, 1))) else None 
-    val b_write = Vec(p.nPort, new CtrlWriteIO(p.useDome, p.nDome, p.nAddrBit, p.nDataByte))
+    val i_slct_write = if (p.useFieldSlct) Some(Input(new SlctBus(p.nField, p.nPart, 1))) else None 
+    val b_write = Vec(p.nPort, new CtrlWriteIO(p.useField, p.nField, p.nAddrBit, p.nDataByte))
 
     val b_port = Flipped(Vec(2, new DataRamIO(p.nDataByte, p.nAddrBit)))
   })
 
   // ******************************
-  //          MULTI DOME
+  //          MULTI FIELD
   // ******************************
   for (po <- 0 until 2) {
     io.b_port(po) := DontCare
     io.b_port(po).en := false.B
   }
 
-  if ((p.useDomeSlct) && (!p.isRom)) {
+  if ((p.useFieldSlct) && (!p.isRom)) {
     // ------------------------------
     //             READ
     // ------------------------------
@@ -100,7 +100,7 @@ class DataRamCtrl (p: RamCtrlParams) extends Module {
 
     // Valid
     for (po <- 0 until p.nPort) {
-      w_rvalid(po) := io.b_read(po).valid & (io.b_read(po).dome.get === io.i_slct_read.get.dome)
+      w_rvalid(po) := io.b_read(po).valid & (io.b_read(po).field.get === io.i_slct_read.get.field)
     }
 
     // Select
@@ -138,7 +138,7 @@ class DataRamCtrl (p: RamCtrlParams) extends Module {
 
     // Valid
     for (po <- 0 until p.nPort) {
-      w_wvalid(po) := io.b_write(po).valid & (io.b_write(po).dome.get === io.i_slct_write.get.dome)
+      w_wvalid(po) := io.b_write(po).valid & (io.b_write(po).field.get === io.i_slct_write.get.field)
     }
 
     // Select
@@ -157,7 +157,7 @@ class DataRamCtrl (p: RamCtrlParams) extends Module {
     }
 
   // ******************************
-  //         NO OR ONE DOME
+  //         NO OR ONE FIELD
   // ******************************
   } else {
     for (po <- 0 until p.nPort) {
@@ -198,9 +198,9 @@ class DataRamCtrl (p: RamCtrlParams) extends Module {
 
 class Mb4sDataRam (p: Mb4sRamParams) extends Module {
   val io = IO(new Bundle {    
-    val b_dome = if (p.useDome) Some(Vec(p.nDome, new DomeIO(p.nAddrBit, p.nDataBit))) else None
+    val b_field = if (p.useField) Some(Vec(p.nField, new FieldIO(p.nAddrBit, p.nDataBit))) else None
 
-    val i_slct = if (p.useDomeSlct) Some(Input(new SlctBus(p.nDome, p.nPart, 1))) else None 
+    val i_slct = if (p.useFieldSlct) Some(Input(new SlctBus(p.nField, p.nPart, 1))) else None 
     val b_port = MixedVec(
       for (po <- p.pPort) yield {
         val port = Flipped(new Mb4sIO(po))
@@ -232,25 +232,25 @@ class Mb4sDataRam (p: Mb4sRamParams) extends Module {
   m_ram.io.b_port <> m_intf.io.b_port  
 
   // ******************************
-  //             DOME
+  //            FIELD
   // ******************************
-  if (p.useDome) {
-    for (d <- 0 until p.nDome) {
-      io.b_dome.get(d).free := true.B
+  if (p.useField) {
+    for (f <- 0 until p.nField) {
+      io.b_field.get(f).free := true.B
     }
   }
 
-  if (p.useDomeSlct) {
-    val r_slct = Reg(new SlctBus(p.nDome, p.nPart, 1))
+  if (p.useFieldSlct) {
+    val r_slct = Reg(new SlctBus(p.nField, p.nPart, 1))
 
     r_slct := io.i_slct.get
 
-    if (p.pCtrl(0).useDomeSlct) {
+    if (p.pCtrl(0).useFieldSlct) {
       m_ctrl(0).io.i_slct_read.get := io.i_slct.get
       m_ctrl(0).io.i_slct_write.get := r_slct
     }
     
-    if ((p.nPort > 1) && (p.pCtrl(1).useDomeSlct)) {
+    if ((p.nPort > 1) && (p.pCtrl(1).useFieldSlct)) {
       m_ctrl(1).io.i_slct_read.get := io.i_slct.get
       m_ctrl(1).io.i_slct_write.get := r_slct
     }

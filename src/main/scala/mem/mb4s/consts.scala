@@ -91,7 +91,7 @@ object SIZE {
 }
 
 object MB4S {
-  def node (p: Array[Mb4sParams], multiDome: Boolean) : Mb4sParams = {
+  def node (p: Array[Mb4sParams], multiField: Boolean) : Mb4sParams = {
     return new Mb4sConfig (
       debug = {
         var tmp: Boolean = p(0).debug
@@ -146,24 +146,24 @@ object MB4S {
         }
         tmp
       },
-      useDome = {
-        var tmp: Boolean = p(0).useDome
+      useField = {
+        var tmp: Boolean = p(0).useField
         for (s <- 1 until p.size) {
-          require((p(s).useDome == tmp), "All masters must consider the same use of domes.")
+          require((p(s).useField == tmp), "All masters must consider the same use of fields.")
         }
         tmp
       },
-      nDome = {
-        var tmp: Int = p(0).nDome
+      nField = {
+        var tmp: Int = p(0).nField
         for (s <- 1 until p.size) {
-          require((p(s).nDome == tmp), "All masters must consider the same number of domes.")
+          require((p(s).nField == tmp), "All masters must consider the same number of fields.")
         }
         tmp
       },
-      multiDome = {
-        var tmp: Boolean = multiDome
+      multiField = {
+        var tmp: Boolean = multiField
         for (s <- 0 until p.size) {
-          if (p(s).multiDome == true) {
+          if (p(s).multiField == true) {
             tmp = true
           }
         }

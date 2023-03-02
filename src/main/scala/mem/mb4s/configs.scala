@@ -31,9 +31,9 @@ object Mb4sConfig0 extends Mb4sConfig (
   useAmo = false,
   nDataByte = 4,
 
-  useDome = false,
-  nDome = 1,
-  multiDome = false
+  useField = false,
+  nField = 1,
+  multiField = false
 ) 
 
 object Mb4sConfig1 extends Mb4sConfig (
@@ -44,9 +44,9 @@ object Mb4sConfig1 extends Mb4sConfig (
   useAmo = false,
   nDataByte = 8,
 
-  useDome = false,
-  nDome = 1,
-  multiDome = false
+  useField = false,
+  nField = 1,
+  multiField = false
 )
 
 object Mb4sConfig5 extends Mb4sConfig (
@@ -57,9 +57,9 @@ object Mb4sConfig5 extends Mb4sConfig (
   useAmo = false,
   nDataByte = 4,
 
-  useDome = true,
-  nDome = 2,
-  multiDome = false
+  useField = true,
+  nField = 2,
+  multiField = false
 )
 
 object Mb4sConfig6 extends Mb4sConfig (
@@ -70,9 +70,9 @@ object Mb4sConfig6 extends Mb4sConfig (
   useAmo = false,
   nDataByte = 4,
 
-  useDome = true,
-  nDome = 2,
-  multiDome = true
+  useField = true,
+  nField = 2,
+  multiField = true
 )
 
 object Mb4sConfig7 extends Mb4sConfig (
@@ -83,9 +83,9 @@ object Mb4sConfig7 extends Mb4sConfig (
   useAmo = false,
   nDataByte = 8,
 
-  useDome = true,
-  nDome = 2,
-  multiDome = true
+  useField = true,
+  nField = 2,
+  multiField = true
 )
 
 // ******************************
@@ -120,7 +120,7 @@ object Mb4sCrossbarConfigBase extends Mb4sCrossbarConfig (
   nBus = 2,
   
   debug = true,  
-  multiDome = true,
+  multiField = true,
   nDepth = 2,
   useDirect = false
 )

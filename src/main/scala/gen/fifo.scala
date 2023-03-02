@@ -3,7 +3,7 @@
  * Created Date: 2023-02-25 12:54:02 pm                                        *
  * Author: Mathieu Escouteloup                                                 *
  * -----                                                                       *
- * Last Modified: 2023-02-25 09:25:49 pm                                       *
+ * Last Modified: 2023-03-02 08:52:14 am                                       *
  * Modified By: Mathieu Escouteloup                                            *
  * -----                                                                       *
  * License: See LICENSE.md                                                     *
@@ -18,7 +18,7 @@ package herd.common.gen
 import chisel3._
 import chisel3.util._
 
-import herd.common.dome._
+import herd.common.field._
 
 
 class GenFifo[TC <: Data, TD <: Data](p: GenParams, tc: TC, td: TD, nSeqLvl: Int, depth: Int, nInPort: Int, nOutPort: Int) extends Module {
@@ -216,35 +216,35 @@ class GenFifo[TC <: Data, TD <: Data](p: GenParams, tc: TC, td: TD, nSeqLvl: Int
 
 class GenDFifo[TC <: Data, TD <: Data](p: GenParams, tc: TC, td: TD, nSeqLvl: Int, depth: Int, nInPort: Int, nOutPort: Int) extends Module {
   val io = IO(new Bundle {
-    val i_flush = Input(Vec(p.nDomeSlct, Bool()))
+    val i_flush = Input(Vec(p.nFieldSlct, Bool()))
 
     val b_din = Vec(nInPort, Flipped(new GenDRVIO(p, tc, td)))
 
-    val o_pt = Output(Vec(p.nDomeSlct, UInt((log2Ceil(depth + 1)).W)))
+    val o_pt = Output(Vec(p.nFieldSlct, UInt((log2Ceil(depth + 1)).W)))
     val o_val = Output(Vec(depth, new GenDVBus(p, tc, td)))
     
     val b_dout = Vec(nOutPort, new GenDRVIO(p, tc, td))
   })
 
-  val r_pt = RegInit(VecInit(Seq.fill(p.nDomeSlct)(0.U((log2Ceil(depth + 1)).W))))
+  val r_pt = RegInit(VecInit(Seq.fill(p.nFieldSlct)(0.U((log2Ceil(depth + 1)).W))))
   val r_fifo = Reg(Vec(depth, new GenDBus(p, tc, td)))
 
-  val w_out_pt = Wire(Vec(p.nDomeSlct, Vec(nOutPort + 1, UInt((log2Ceil(depth + 1)).W))))
-  val w_out_in_pt = Wire(Vec(p.nDomeSlct, Vec(nOutPort + 1, UInt((log2Ceil(nInPort + 1)).W))))
+  val w_out_pt = Wire(Vec(p.nFieldSlct, Vec(nOutPort + 1, UInt((log2Ceil(depth + 1)).W))))
+  val w_out_in_pt = Wire(Vec(p.nFieldSlct, Vec(nOutPort + 1, UInt((log2Ceil(nInPort + 1)).W))))
 
-  val w_in_pt = Wire(Vec(p.nDomeSlct, Vec(nInPort + 1, UInt((log2Ceil(depth + 1)).W))))
-  val w_full_pt = Wire(Vec(p.nDomeSlct, Vec(nInPort + 1, UInt((log2Ceil(depth + 1)).W))))
+  val w_in_pt = Wire(Vec(p.nFieldSlct, Vec(nInPort + 1, UInt((log2Ceil(depth + 1)).W))))
+  val w_full_pt = Wire(Vec(p.nFieldSlct, Vec(nInPort + 1, UInt((log2Ceil(depth + 1)).W))))
 
-  for (ds <- 0 until p.nDomeSlct) {
+  for (fs <- 0 until p.nFieldSlct) {
     // ******************************
     //              READ
     // ******************************
-    w_out_pt(ds)(0) := 0.U
-    w_out_in_pt(ds)(0) := nInPort.U
+    w_out_pt(fs)(0) := 0.U
+    w_out_in_pt(fs)(0) := nInPort.U
     if (nSeqLvl <= 0) {
       for (i <- 0 until nInPort) {
-        when (io.b_din(nInPort - 1 - i).valid(ds)) {
-          w_out_in_pt(ds)(0) := (nInPort - 1 - i).U
+        when (io.b_din(nInPort - 1 - i).valid(fs)) {
+          w_out_in_pt(fs)(0) := (nInPort - 1 - i).U
         }
       }
     }  
@@ -254,38 +254,38 @@ class GenDFifo[TC <: Data, TD <: Data](p: GenParams, tc: TC, td: TD, nSeqLvl: In
     // ------------------------------
     if (nSeqLvl <= 0) {
       for (o <- 0 until nOutPort) {
-        io.b_dout(o).valid(ds) := (w_out_pt(ds)(o) < r_pt(ds)) | (w_out_in_pt(ds)(o) < nInPort.U)
-        if (p.useDomeTag)     io.b_dout(o).dome.get     := r_fifo(0).dome.get
-        if (tc.getWidth > 0)  io.b_dout(o).ctrl.get(ds) := r_fifo(0).ctrl.get(ds)
-        if (td.getWidth > 0)  io.b_dout(o).data.get(ds) := r_fifo(0).data.get(ds)
-        w_out_pt(ds)(o + 1) := w_out_pt(ds)(o)
-        w_out_in_pt(ds)(o + 1) := w_out_in_pt(ds)(o)
+        io.b_dout(o).valid(fs) := (w_out_pt(fs)(o) < r_pt(fs)) | (w_out_in_pt(fs)(o) < nInPort.U)
+        if (p.useFieldTag)    io.b_dout(o).field.get    := r_fifo(0).field.get
+        if (tc.getWidth > 0)  io.b_dout(o).ctrl.get(fs) := r_fifo(0).ctrl.get(fs)
+        if (td.getWidth > 0)  io.b_dout(o).data.get(fs) := r_fifo(0).data.get(fs)
+        w_out_pt(fs)(o + 1) := w_out_pt(fs)(o)
+        w_out_in_pt(fs)(o + 1) := w_out_in_pt(fs)(o)
 
         for (d <- 0 until depth) {
-          when ((w_out_pt(ds)(o) < r_pt(ds)) & (d.U === w_out_pt(ds)(o))) {
-            if (p.useDomeTag)     io.b_dout(o).dome.get     := r_fifo(d).dome.get
-            if (tc.getWidth > 0)  io.b_dout(o).ctrl.get(ds) := r_fifo(d).ctrl.get(ds)
-            if (td.getWidth > 0)  io.b_dout(o).data.get(ds) := r_fifo(d).data.get(ds)
+          when ((w_out_pt(fs)(o) < r_pt(fs)) & (d.U === w_out_pt(fs)(o))) {
+            if (p.useFieldTag)    io.b_dout(o).field.get    := r_fifo(d).field.get
+            if (tc.getWidth > 0)  io.b_dout(o).ctrl.get(fs) := r_fifo(d).ctrl.get(fs)
+            if (td.getWidth > 0)  io.b_dout(o).data.get(fs) := r_fifo(d).data.get(fs)
           }
         }
 
         for (i <- 0 until nInPort) {
-          when((w_out_pt(ds)(o) >= r_pt(ds)) & (w_out_in_pt(ds)(o) < nInPort.U) & (i.U === w_out_in_pt(ds)(o))) {
-            if (p.useDomeTag)     io.b_dout(o).dome.get     := io.b_din(i).dome.get
-            if (tc.getWidth > 0)  io.b_dout(o).ctrl.get(ds) := io.b_din(i).ctrl.get(ds)
-            if (td.getWidth > 0)  io.b_dout(o).data.get(ds) := io.b_din(i).data.get(ds)
+          when((w_out_pt(fs)(o) >= r_pt(fs)) & (w_out_in_pt(fs)(o) < nInPort.U) & (i.U === w_out_in_pt(fs)(o))) {
+            if (p.useFieldTag)    io.b_dout(o).field.get    := io.b_din(i).field.get
+            if (tc.getWidth > 0)  io.b_dout(o).ctrl.get(fs) := io.b_din(i).ctrl.get(fs)
+            if (td.getWidth > 0)  io.b_dout(o).data.get(fs) := io.b_din(i).data.get(fs)
           }
         }
 
-        when(io.b_dout(o).ready(ds) & (w_out_pt(ds)(o) < r_pt(ds))) {
-          w_out_pt(ds)(o + 1) := w_out_pt(ds)(o) + 1.U
+        when(io.b_dout(o).ready(fs) & (w_out_pt(fs)(o) < r_pt(fs))) {
+          w_out_pt(fs)(o + 1) := w_out_pt(fs)(o) + 1.U
         }
 
-        when(io.b_dout(o).ready(ds) & (w_out_pt(ds)(o) >= r_pt(ds)) & (w_out_in_pt(ds)(o) < nInPort.U)) {
-          w_out_in_pt(ds)(o + 1) := nInPort.U
+        when(io.b_dout(o).ready(fs) & (w_out_pt(fs)(o) >= r_pt(fs)) & (w_out_in_pt(fs)(o) < nInPort.U)) {
+          w_out_in_pt(fs)(o + 1) := nInPort.U
           for (i <- 0 until nInPort) {
-            when (io.b_din(nInPort - 1 - i).valid(ds) & ((nInPort - 1 - i).U > w_out_in_pt(ds)(o))) {
-              w_out_in_pt(ds)(o + 1) := (nInPort - 1 - i).U
+            when (io.b_din(nInPort - 1 - i).valid(fs) & ((nInPort - 1 - i).U > w_out_in_pt(fs)(o))) {
+              w_out_in_pt(fs)(o + 1) := (nInPort - 1 - i).U
             }
           }
         }
@@ -297,26 +297,26 @@ class GenDFifo[TC <: Data, TD <: Data](p: GenParams, tc: TC, td: TD, nSeqLvl: In
     } else {
       for (o <- 0 until nOutPort) {
         if (nSeqLvl >= 5) {
-          io.b_dout(o).valid(ds) := (o.U < r_pt(ds))
+          io.b_dout(o).valid(fs) := (o.U < r_pt(fs))
         } else {
-          io.b_dout(o).valid(ds) := (w_out_pt(ds)(o) < r_pt(ds))
+          io.b_dout(o).valid(fs) := (w_out_pt(fs)(o) < r_pt(fs))
         } 
-        if (p.useDomeTag)     io.b_dout(o).dome.get     := r_fifo(0).dome.get
-        if (tc.getWidth > 0)  io.b_dout(o).ctrl.get(ds) := r_fifo(0).ctrl.get(ds)
-        if (td.getWidth > 0)  io.b_dout(o).data.get(ds) := r_fifo(0).data.get(ds)
-        w_out_pt(ds)(o + 1) := w_out_pt(ds)(o)
-        w_out_in_pt(ds)(o + 1) := w_out_in_pt(ds)(o)
+        if (p.useFieldTag)    io.b_dout(o).field.get    := r_fifo(0).field.get
+        if (tc.getWidth > 0)  io.b_dout(o).ctrl.get(fs) := r_fifo(0).ctrl.get(fs)
+        if (td.getWidth > 0)  io.b_dout(o).data.get(fs) := r_fifo(0).data.get(fs)
+        w_out_pt(fs)(o + 1) := w_out_pt(fs)(o)
+        w_out_in_pt(fs)(o + 1) := w_out_in_pt(fs)(o)
 
         for (d <- 0 until depth) {
-          when (d.U === w_out_pt(ds)(o)) {
-            if (p.useDomeTag)     io.b_dout(o).dome.get     := r_fifo(d).dome.get
-            if (tc.getWidth > 0)  io.b_dout(o).ctrl.get(ds) := r_fifo(d).ctrl.get(ds)
-            if (td.getWidth > 0)  io.b_dout(o).data.get(ds) := r_fifo(d).data.get(ds)
+          when (d.U === w_out_pt(fs)(o)) {
+            if (p.useFieldTag)    io.b_dout(o).field.get    := r_fifo(d).field.get
+            if (tc.getWidth > 0)  io.b_dout(o).ctrl.get(fs) := r_fifo(d).ctrl.get(fs)
+            if (td.getWidth > 0)  io.b_dout(o).data.get(fs) := r_fifo(d).data.get(fs)
           }
         }
 
-        when(io.b_dout(o).ready(ds) & (w_out_pt(ds)(o) < r_pt(ds))) {
-          w_out_pt(ds)(o + 1) := w_out_pt(ds)(o) + 1.U
+        when(io.b_dout(o).ready(fs) & (w_out_pt(fs)(o) < r_pt(fs))) {
+          w_out_pt(fs)(o + 1) := w_out_pt(fs)(o) + 1.U
         }
       }      
     }
@@ -325,11 +325,11 @@ class GenDFifo[TC <: Data, TD <: Data](p: GenParams, tc: TC, td: TD, nSeqLvl: In
     //             SHIFT
     // ******************************
     for (o <- 0 to nOutPort) {
-      when (o.U === w_out_pt(ds)(nOutPort)) {
+      when (o.U === w_out_pt(fs)(nOutPort)) {
         for (s <- 0 until depth - o) {
-          if (p.useDomeTag)     r_fifo(s).dome.get     := r_fifo(s + o).dome.get
-          if (tc.getWidth > 0)  r_fifo(s).ctrl.get(ds) := r_fifo(s + o).ctrl.get(ds)
-          if (td.getWidth > 0)  r_fifo(s).data.get(ds) := r_fifo(s + o).data.get(ds)          
+          if (p.useFieldTag)    r_fifo(s).field.get    := r_fifo(s + o).field.get
+          if (tc.getWidth > 0)  r_fifo(s).ctrl.get(fs) := r_fifo(s + o).ctrl.get(fs)
+          if (td.getWidth > 0)  r_fifo(s).data.get(fs) := r_fifo(s + o).data.get(fs)          
         }
       }
     }  
@@ -337,59 +337,59 @@ class GenDFifo[TC <: Data, TD <: Data](p: GenParams, tc: TC, td: TD, nSeqLvl: In
     // ******************************
     //             WRITE
     // ******************************
-    w_in_pt(ds)(0) := r_pt(ds) - w_out_pt(ds)(nOutPort)
+    w_in_pt(fs)(0) := r_pt(fs) - w_out_pt(fs)(nOutPort)
     if (nSeqLvl <= 1) {
-      w_full_pt(ds)(0) := r_pt(ds) - w_out_pt(ds)(nOutPort)
+      w_full_pt(fs)(0) := r_pt(fs) - w_out_pt(fs)(nOutPort)
     } else if ((nSeqLvl == 2) || (nSeqLvl == 3)) {
-      w_full_pt(ds)(0) := r_pt(ds)
+      w_full_pt(fs)(0) := r_pt(fs)
     } else {
-      when((depth.U - r_pt(ds)) >= nInPort.U) {
-        w_full_pt(ds)(0) := r_pt(ds)
+      when((depth.U - r_pt(fs)) >= nInPort.U) {
+        w_full_pt(fs)(0) := r_pt(fs)
       }.otherwise {
-        w_full_pt(ds)(0) := depth.U
+        w_full_pt(fs)(0) := depth.U
       }
     }
 
     for (i <- 0 until nInPort) {
-      w_in_pt(ds)(i + 1) := w_in_pt(ds)(i)
+      w_in_pt(fs)(i + 1) := w_in_pt(fs)(i)
 
       if (nSeqLvl <= 0) {
-        io.b_din(i).ready(ds) := (w_full_pt(ds)(i) < depth.U) | (w_out_in_pt(ds)(nOutPort) > i.U)
+        io.b_din(i).ready(fs) := (w_full_pt(fs)(i) < depth.U) | (w_out_in_pt(fs)(nOutPort) > i.U)
 
-        w_full_pt(ds)(i + 1) := w_full_pt(ds)(i)
+        w_full_pt(fs)(i + 1) := w_full_pt(fs)(i)
 
-        when (io.b_din(i).valid(ds) & (w_full_pt(ds)(i) < depth.U) & (w_out_in_pt(ds)(nOutPort) <= i.U)) {
+        when (io.b_din(i).valid(fs) & (w_full_pt(fs)(i) < depth.U) & (w_out_in_pt(fs)(nOutPort) <= i.U)) {
           for (d <- 0 until depth) {
-            when (d.U === w_in_pt(ds)(i)) {
-              if (p.useDomeTag)     r_fifo(d).dome.get := io.b_din(i).dome.get
-              if (tc.getWidth > 0)  r_fifo(d).ctrl.get(ds) := io.b_din(i).ctrl.get(ds)
-              if (td.getWidth > 0)  r_fifo(d).data.get(ds) := io.b_din(i).data.get(ds)
+            when (d.U === w_in_pt(fs)(i)) {
+              if (p.useFieldTag)    r_fifo(d).field.get    := io.b_din(i).field.get
+              if (tc.getWidth > 0)  r_fifo(d).ctrl.get(fs) := io.b_din(i).ctrl.get(fs)
+              if (td.getWidth > 0)  r_fifo(d).data.get(fs) := io.b_din(i).data.get(fs)
             }
           }
-          w_in_pt(ds)(i + 1) := w_in_pt(ds)(i) + 1.U
-          w_full_pt(ds)(i + 1) := w_full_pt(ds)(i) + 1.U
+          w_in_pt(fs)(i + 1) := w_in_pt(fs)(i) + 1.U
+          w_full_pt(fs)(i + 1) := w_full_pt(fs)(i) + 1.U
         }
       } else {
-        io.b_din(i).ready(ds) := (w_full_pt(ds)(i) < depth.U)
+        io.b_din(i).ready(fs) := (w_full_pt(fs)(i) < depth.U)
 
         if (nSeqLvl == 3) {
-          w_full_pt(ds)(i + 1) := w_full_pt(ds)(i) + 1.U
+          w_full_pt(fs)(i + 1) := w_full_pt(fs)(i) + 1.U
         } else if (nSeqLvl >= 4) {
-          w_full_pt(ds)(i + 1) := w_full_pt(ds)(0)
+          w_full_pt(fs)(i + 1) := w_full_pt(fs)(0)
         } else {
-          w_full_pt(ds)(i + 1) := w_full_pt(ds)(i)
+          w_full_pt(fs)(i + 1) := w_full_pt(fs)(i)
         }
 
-        when (io.b_din(i).valid(ds) & (w_full_pt(ds)(i) < depth.U)) {
+        when (io.b_din(i).valid(fs) & (w_full_pt(fs)(i) < depth.U)) {
           for (d <- 0 until depth) {
-            when (d.U === w_in_pt(ds)(i)) {
-              if (p.useDomeTag)     r_fifo(d).dome.get := io.b_din(i).dome.get
-              if (tc.getWidth > 0)  r_fifo(d).ctrl.get(ds) := io.b_din(i).ctrl.get(ds)
-              if (td.getWidth > 0)  r_fifo(d).data.get(ds) := io.b_din(i).data.get(ds)
+            when (d.U === w_in_pt(fs)(i)) {
+              if (p.useFieldTag)    r_fifo(d).field.get    := io.b_din(i).field.get
+              if (tc.getWidth > 0)  r_fifo(d).ctrl.get(fs) := io.b_din(i).ctrl.get(fs)
+              if (td.getWidth > 0)  r_fifo(d).data.get(fs) := io.b_din(i).data.get(fs)
             }
           }
-          w_in_pt(ds)(i + 1) := w_in_pt(ds)(i) + 1.U
-          if (nSeqLvl <= 2) w_full_pt(ds)(i + 1) := w_full_pt(ds)(i) + 1.U
+          w_in_pt(fs)(i + 1) := w_in_pt(fs)(i) + 1.U
+          if (nSeqLvl <= 2) w_full_pt(fs)(i + 1) := w_full_pt(fs)(i) + 1.U
         }
       }
     }  
@@ -397,36 +397,36 @@ class GenDFifo[TC <: Data, TD <: Data](p: GenParams, tc: TC, td: TD, nSeqLvl: In
     // ******************************
     //           REGISTER
     // ******************************
-    when (io.i_flush(ds)) {
-      r_pt(ds) := 0.U
+    when (io.i_flush(fs)) {
+      r_pt(fs) := 0.U
     }.otherwise {
-      r_pt(ds) := w_in_pt(ds)(nInPort)
+      r_pt(fs) := w_in_pt(fs)(nInPort)
     } 
 
     // ******************************
     //        EXTERNAL ACCESS
     // ******************************
-    io.o_pt(ds) := r_pt(ds)
+    io.o_pt(fs) := r_pt(fs)
     for (d <- 0 until depth) {
-      io.o_val(d).valid(ds) := (d.U < r_pt(ds))
-      if (p.useDomeTag)     io.o_val(d).dome.get := r_fifo(d).dome.get
-      if (tc.getWidth > 0)  io.o_val(d).ctrl.get(ds) := r_fifo(d).ctrl.get(ds)
-      if (td.getWidth > 0)  io.o_val(d).data.get(ds) := r_fifo(d).data.get(ds)
+      io.o_val(d).valid(fs) := (d.U < r_pt(fs))
+      if (p.useFieldTag)    io.o_val(d).field.get    := r_fifo(d).field.get
+      if (tc.getWidth > 0)  io.o_val(d).ctrl.get(fs) := r_fifo(d).ctrl.get(fs)
+      if (td.getWidth > 0)  io.o_val(d).data.get(fs) := r_fifo(d).data.get(fs)
     }
   }  
 }
 
 class GenSFifo[TC <: Data, TD <: Data](p: GenParams, tc: TC, td: TD, nSeqLvl: Int, depth: Int, nInPort: Int, nOutPort: Int) extends Module {
   val io = IO(new Bundle {
-    val i_flush = Input(Vec(p.nDomeSlct, Bool()))
+    val i_flush = Input(Vec(p.nFieldSlct, Bool()))
 
-    val i_slct_in = if (p.useDomeSlct) Some(Input(Vec(nInPort, new SlctBus(p.nDome, p.nPart, 1)))) else None
+    val i_slct_in = if (p.useFieldSlct) Some(Input(Vec(nInPort, new SlctBus(p.nField, p.nPart, 1)))) else None
     val b_sin = Vec(nInPort, Flipped(new GenSRVIO(p, tc, td)))
 
-    val o_pt = Output(Vec(p.nDomeSlct, UInt((log2Ceil(depth + 1)).W)))
+    val o_pt = Output(Vec(p.nFieldSlct, UInt((log2Ceil(depth + 1)).W)))
     val o_val = Output(Vec(depth, new GenDVBus(p, tc, td)))
     
-    val i_slct_out = if (p.useDomeSlct) Some(Input(new SlctBus(p.nDome, p.nPart, 1))) else None
+    val i_slct_out = if (p.useFieldSlct) Some(Input(new SlctBus(p.nField, p.nPart, 1))) else None
     val b_sout = Vec(nOutPort, new GenSRVIO(p, tc, td))
   })
 
@@ -438,7 +438,7 @@ class GenSFifo[TC <: Data, TD <: Data](p: GenParams, tc: TC, td: TD, nSeqLvl: In
 
   // Inputs
   for (i <- 0 until nInPort) {
-    if (p.useDomeSlct) m_in(i).io.i_slct.get := io.i_slct_in.get(i)
+    if (p.useFieldSlct) m_in(i).io.i_slct.get := io.i_slct_in.get(i)
     m_in(i).io.b_sin <> io.b_sin(i)
   }
 
@@ -451,7 +451,7 @@ class GenSFifo[TC <: Data, TD <: Data](p: GenParams, tc: TC, td: TD, nSeqLvl: In
 
   // Outputs
   for (o <- 0 until nOutPort) {
-    if (p.useDomeSlct) m_out(o).io.i_slct.get := io.i_slct_out.get
+    if (p.useFieldSlct) m_out(o).io.i_slct.get := io.i_slct_out.get
     m_out(o).io.b_din <> m_fifo.io.b_dout(o)
     io.b_sout(o) <> m_out(o).io.b_sout
   }

@@ -3,7 +3,7 @@
  * Created Date: 2023-02-25 12:54:02 pm                                        *
  * Author: Mathieu Escouteloup                                                 *
  * -----                                                                       *
- * Last Modified: 2023-02-25 09:25:02 pm                                       *
+ * Last Modified: 2023-03-02 08:43:14 am                                       *
  * Modified By: Mathieu Escouteloup                                            *
  * -----                                                                       *
  * License: See LICENSE.md                                                     *
@@ -13,13 +13,13 @@
  */
 
 
-package herd.common.dome
+package herd.common.field
 
 import chisel3._
 import chisel3.util._
 
 
-class Part2Rsrc(nHart: Int, nDome: Int, nPart: Int, nRsrc: Int) extends Module {
+class Part2Rsrc(nHart: Int, nField: Int, nPart: Int, nRsrc: Int) extends Module {
   // ******************************
   //       INTERNAL PARAMETERS
   // ******************************
@@ -45,14 +45,14 @@ class Part2Rsrc(nHart: Int, nDome: Int, nPart: Int, nRsrc: Int) extends Module {
   //             I/Os
   // ******************************
   val io = IO(new Bundle {
-    val b_part = new NRsrcIO(nHart, nDome, nPart)
-    val b_rsrc = Flipped(new NRsrcIO(nHart, nDome, nRsrc))
+    val b_part = new NRsrcIO(nHart, nField, nPart)
+    val b_rsrc = Flipped(new NRsrcIO(nHart, nField, nRsrc))
   })
 
   // ******************************
   //          INTERCONNECT
   // ******************************
-  val w_rsrc = Wire(Output(new NRsrcIO(nHart, nDome, nRsrc)))
+  val w_rsrc = Wire(Output(new NRsrcIO(nHart, nField, nRsrc)))
 
   // ------------------------------
   //        STATE (FROM PART)
@@ -62,7 +62,7 @@ class Part2Rsrc(nHart: Int, nDome: Int, nPart: Int, nRsrc: Int) extends Module {
       w_rsrc.state(nPartPort(np) + npr).valid  := io.b_part.state(np).valid
       w_rsrc.state(nPartPort(np) + npr).flush  := io.b_part.state(np).flush
       w_rsrc.state(nPartPort(np) + npr).hart   := io.b_part.state(np).hart
-      w_rsrc.state(nPartPort(np) + npr).dome   := io.b_part.state(np).dome
+      w_rsrc.state(nPartPort(np) + npr).field   := io.b_part.state(np).field
     }
   }
 
@@ -86,23 +86,22 @@ class Part2Rsrc(nHart: Int, nDome: Int, nPart: Int, nRsrc: Int) extends Module {
   // ------------------------------
   //         WEIGHT & PORT
   // ------------------------------
-  val w_port = Wire(Vec(nDome, Vec(nRsrc + 1, UInt((log2Ceil(nRsrc) + 1).W))))
+  val w_port = Wire(Vec(nField, Vec(nRsrc + 1, UInt((log2Ceil(nRsrc) + 1).W))))
 
-  for (d <- 0 until nDome) {
-    w_port(d)(0) := 0.U
+  for (f <- 0 until nField) {
+    w_port(f)(0) := 0.U
     for (nr <- 1 to nRsrc) {
-      w_port(d)(nr) := Mux((d.U === w_rsrc.state(nr - 1).dome), w_port(d)(nr - 1) + 1.U, w_port(d)(nr - 1))
+      w_port(f)(nr) := Mux((f.U === w_rsrc.state(nr - 1).field), w_port(f)(nr - 1) + 1.U, w_port(f)(nr - 1))
     }
   }  
 
   for (nr <- 0 until nRsrc) {
-    w_rsrc.state(nr).port := w_port(w_rsrc.state(nr).dome)(nr)
+    w_rsrc.state(nr).port := w_port(w_rsrc.state(nr).field)(nr)
   }
   
-  for (d <- 0 until nDome) {
-    w_rsrc.weight(d) := w_port(d)(nRsrc)
+  for (f <- 0 until nField) {
+    w_rsrc.weight(f) := w_port(f)(nRsrc)
   }
-
 
   // ******************************
   //            OUTPUTS

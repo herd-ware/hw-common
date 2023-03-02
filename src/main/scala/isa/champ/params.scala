@@ -19,7 +19,7 @@ import chisel3._
 import chisel3.util._
 
 
-trait DomeCfgParams {
+trait FieldStructParams {
   def nDataBit: Int
   def nTrapLvl: Int
   def useRange: Boolean
@@ -34,9 +34,9 @@ trait DomeCfgParams {
   }
 }
 
-case class DomeCfgConfig (
+case class FieldStructConfig (
   nDataBit: Int,
   nTrapLvl: Int,
   useRange: Boolean,
   useFr: Boolean
-) extends DomeCfgParams
+) extends FieldStructParams

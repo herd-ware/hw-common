@@ -13,28 +13,28 @@
  */
 
 
-package herd.common.dome
+package herd.common.field
 
 import chisel3._
 import chisel3.util._
 
 
-trait DomeParams {
-  def useDome: Boolean
-  def nDome: Int
-  def multiDome: Boolean
-  def useDomeTag: Boolean = useDome && !multiDome
-  def useDomeSlct: Boolean = useDome && multiDome
-  def nDomeTag: Int = {
-    if (useDome) {
-      return nDome
+trait FieldParams {
+  def useField: Boolean
+  def nField: Int
+  def multiField: Boolean
+  def useFieldTag: Boolean = useField && !multiField
+  def useFieldSlct: Boolean = useField && multiField
+  def nFieldTag: Int = {
+    if (useField) {
+      return nField
     } else {
       return 1
     }
   }
-  def nDomeSlct: Int = {
-    if (useDomeSlct) {
-      return nDome
+  def nFieldSlct: Int = {
+    if (useFieldSlct) {
+      return nField
     } else {
       return 1
     }
@@ -42,9 +42,9 @@ trait DomeParams {
   def nPart: Int
 }
 
-case class DomeConfig (
-  useDome: Boolean,
-  nDome: Int,
-  multiDome: Boolean,
+case class FieldConfig (
+  useField: Boolean,
+  nField: Int,
+  multiField: Boolean,
   nPart: Int
-) extends DomeParams
+) extends FieldParams

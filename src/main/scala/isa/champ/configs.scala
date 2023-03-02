@@ -19,7 +19,7 @@ import chisel3._
 import chisel3.util._
 
 
-object DomeCfgConfigBase extends DomeCfgConfig (
+object FieldStructConfigBase extends FieldStructConfig (
   nDataBit = 64,
   nTrapLvl = 1,
   useRange = false,

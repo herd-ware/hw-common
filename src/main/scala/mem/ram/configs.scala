@@ -25,9 +25,9 @@ object RamCtrlConfigBase extends RamCtrlConfig (
   nPort = 2,
   debug = true, 
 
-  useDome = true,
-  nDome = 2,
-  multiDome = true,
+  useField = true,
+  nField = 2,
+  multiField = true,
   nPart = 1,
 
   isRom = false,

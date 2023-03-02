@@ -13,16 +13,16 @@
  */
 
 
-package herd.common.dome
+package herd.common.field
 
 import chisel3._
 import chisel3.util._
 
 
 // ******************************
-//             DOME
+//            FIELD
 // ******************************
-class DomeIO(nAddrBit: Int, nDataBit: Int) extends Bundle {
+class FieldIO(nAddrBit: Int, nDataBit: Int) extends Bundle {
   val valid = Input(Bool())
   val id = Input(UInt(nDataBit.W))
   val entry = Input(UInt(nAddrBit.W))
@@ -37,33 +37,33 @@ class DomeIO(nAddrBit: Int, nDataBit: Int) extends Bundle {
 // ******************************
 //           RESOURCE
 // ******************************
-class RsrcIO (nHart: Int, nDome: Int, nRsrc: Int) extends Bundle {
+class RsrcIO (nHart: Int, nField: Int, nRsrc: Int) extends Bundle {
   val valid = Input(Bool())
   val flush = Input(Bool())
   val free = Output(Bool())
   val hart = Input(UInt(log2Ceil(nHart).W))
-  val dome = Input(UInt(log2Ceil(nDome).W))
+  val field = Input(UInt(log2Ceil(nField).W))
   val port = Input(UInt(log2Ceil(nRsrc).W))
 
   def fromMaster(rsrc: RsrcIO): Unit = {
     valid := rsrc.valid
     flush := rsrc.flush
     hart  := rsrc.hart 
-    dome  := rsrc.dome 
+    field  := rsrc.field 
     port  := rsrc.port 
   }
 }
 
-class NRsrcIO (nHart: Int, nDome: Int, nRsrc: Int) extends Bundle {
-  val weight = Input(Vec(nDome, UInt(log2Ceil(nRsrc + 1).W)))
-  val state = Vec(nRsrc, new RsrcIO(nHart, nDome, nRsrc))
+class NRsrcIO (nHart: Int, nField: Int, nRsrc: Int) extends Bundle {
+  val weight = Input(Vec(nField, UInt(log2Ceil(nRsrc + 1).W)))
+  val state = Vec(nRsrc, new RsrcIO(nHart, nField, nRsrc))
 }
 
 // ******************************
-//           DOME SELECT
+//          FIELD SELECT
 // ******************************
-class SlctBus(nDome: Int, nPart: Int, nStep: Int) extends Bundle {
-  val dome = UInt(log2Ceil(nDome).W)
-  val next = UInt(log2Ceil(nDome).W)
+class SlctBus(nField: Int, nPart: Int, nStep: Int) extends Bundle {
+  val field = UInt(log2Ceil(nField).W)
+  val next = UInt(log2Ceil(nField).W)
   val step = UInt(log2Ceil(nStep).W)
 }

@@ -19,23 +19,23 @@ import chisel3._
 import chisel3.util._
 import scala.math._
 
-import herd.common.dome._
+import herd.common.field._
 
 
-trait GenParams extends DomeParams {
+trait GenParams extends FieldParams {
   def debug: Boolean
 
-  def useDome: Boolean
-  def nDome: Int
-  def multiDome: Boolean
+  def useField: Boolean
+  def nField: Int
+  def multiField: Boolean
   def nPart: Int
 }
 
 case class GenConfig (
   debug: Boolean,
 
-  useDome: Boolean,
-  nDome: Int,
-  multiDome: Boolean,
+  useField: Boolean,
+  nField: Int,
+  multiField: Boolean,
   nPart: Int
 ) extends GenParams

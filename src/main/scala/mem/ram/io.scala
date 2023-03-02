@@ -24,19 +24,19 @@ import herd.common.mem.mb4s.{SIZE}
 // ******************************
 //             CTRL
 // ******************************
-class CtrlReadIO (useDome: Boolean, nDome: Int, nAddrBit: Int, nDataByte: Int) extends Bundle {
+class CtrlReadIO (useField: Boolean, nField: Int, nAddrBit: Int, nDataByte: Int) extends Bundle {
   val ready = Output(Bool())
   val valid = Input(Bool())
-  val dome = if (useDome) Some(Input(UInt(log2Ceil(nDome).W))) else None
+  val field = if (useField) Some(Input(UInt(log2Ceil(nField).W))) else None
   val mask = Input(UInt(nDataByte.W))
   val addr = Input(UInt(nAddrBit.W))
   val data = Output(UInt((nDataByte * 8).W))
 }
 
-class CtrlWriteIO (useDome: Boolean, nDome: Int, nAddrBit: Int, nDataByte: Int) extends Bundle {
+class CtrlWriteIO (useField: Boolean, nField: Int, nAddrBit: Int, nDataByte: Int) extends Bundle {
   val ready = Output(Bool())
   val valid = Input(Bool())
-  val dome = if (useDome) Some(Input(UInt(log2Ceil(nDome).W))) else None
+  val field = if (useField) Some(Input(UInt(log2Ceil(nField).W))) else None
   val mask = Input(UInt(nDataByte.W))
   val addr = Input(UInt(nAddrBit.W))
   val data = Input(UInt((nDataByte * 8).W))

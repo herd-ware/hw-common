@@ -21,8 +21,8 @@ import chisel3._
 object GenConfigBase extends GenConfig (
   debug = true,
   
-  useDome = true,
-  nDome = 2,
-  multiDome = true,
+  useField = true,
+  nField = 2,
+  multiField = true,
   nPart = 2
 )

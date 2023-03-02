@@ -57,7 +57,7 @@ class Mb4sReqBus(p: Mb4sReqParams) extends Bundle {
 class Mb4sReqIO(p: Mb4sReqParams) extends Bundle {
   val ready = Input(Vec(p.nReadyBit, Bool()))
   val valid = Output(Bool())
-  val dome = if (p.useDome) Some(Output(UInt(log2Ceil(p.nDome).W))) else None
+  val field = if (p.useField) Some(Output(UInt(log2Ceil(p.nField).W))) else None
   val ctrl = Output(new Mb4sReqBus(p))
 }
 
@@ -67,7 +67,7 @@ class Mb4sReqIO(p: Mb4sReqParams) extends Bundle {
 class Mb4sDataIO(p: Mb4sDataParams) extends Bundle {
   val ready = Input(Vec(p.nReadyBit, Bool()))
   val valid = Output(Bool())
-  val dome = if (p.useDome) Some(Output(UInt(log2Ceil(p.nDome).W))) else None
+  val field = if (p.useField) Some(Output(UInt(log2Ceil(p.nField).W))) else None
   val data = Output(UInt((p.nDataByte * 8).W))
 }
 

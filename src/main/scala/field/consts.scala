@@ -13,7 +13,7 @@
  */
 
 
-package herd.common.dome
+package herd.common.field
 
 import chisel3._
 import chisel3.util._
@@ -23,7 +23,7 @@ object SLCT {
   def ZERO: SlctBus = {
     val w_zero = Wire(new SlctBus(1, 1, 1))
 
-    w_zero.dome := 0.U
+    w_zero.field := 0.U
     w_zero.next := 0.U
     w_zero.step := 0.U
 

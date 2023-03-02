@@ -3,7 +3,7 @@
  * Created Date: 2023-02-25 12:54:02 pm                                        *
  * Author: Mathieu Escouteloup                                                 *
  * -----                                                                       *
- * Last Modified: 2023-02-25 09:25:05 pm                                       *
+ * Last Modified: 2023-03-02 01:50:24 pm                                       *
  * Modified By: Mathieu Escouteloup                                            *
  * -----                                                                       *
  * License: See LICENSE.md                                                     *
@@ -13,7 +13,7 @@
  */
 
 
-package herd.common.dome
+package herd.common.field
 
 import chisel3._
 import chisel3.util._
@@ -22,26 +22,26 @@ import chisel3.util._
 // ******************************
 //         STATIC SELECT
 // ******************************
-class StaticSlct (nDome: Int, nPart: Int, nStep: Int) extends Module {
+class StaticSlct (nField: Int, nPart: Int, nStep: Int) extends Module {
   val io = IO(new Bundle {
-    val i_weight = Input(Vec(nDome, UInt(log2Ceil(nPart + 1).W)))
+    val i_weight = Input(Vec(nField, UInt(log2Ceil(nPart + 1).W)))
 
-    val o_slct = Output(new SlctBus(nDome, nPart, nStep))
+    val o_slct = Output(new SlctBus(nField, nPart, nStep))
   })
 
   // ******************************
   //          INITIALIZE
   // ******************************
-  val init_dome = Wire(UInt(log2Ceil(nDome).W))
+  val init_field = Wire(UInt(log2Ceil(nField).W))
   val init_turn = Wire(UInt(log2Ceil(nPart + 1).W))
   val init_step = Wire(UInt(log2Ceil(nStep).W))
 
-  init_dome := 0.U
+  init_field := 0.U
   init_turn := 0.U  
   init_step := 0.U  
 
-  val r_next = RegInit(init_dome)
-  val r_dome = RegInit(init_dome)
+  val r_next = RegInit(init_field)
+  val r_field = RegInit(init_field)
   val r_turn = RegInit(init_turn)
   val r_step = RegInit(init_step)
 
@@ -63,46 +63,46 @@ class StaticSlct (nDome: Int, nPart: Int, nStep: Int) extends Module {
   // ******************************
   //             NEXT
   // ******************************
-  if (nDome > 1) {
+  if (nField > 1) {
     // ------------------------------
-    //          ACTIVE DOME
+    //          ACTIVEFIELD
     // ------------------------------
-    val w_dome_act = Wire(Vec(nDome, Bool()))
+    val w_field_act = Wire(Vec(nField, Bool()))
 
-    for (d <- 0 until nDome) {
-      w_dome_act(d) := (io.i_weight(d) =/= 0.U)
+    for (f <- 0 until nField) {
+      w_field_act(f) := (io.i_weight(f) =/= 0.U)
     }
 
     // ------------------------------
     //             SLCT
     // ------------------------------
-    val w_next_low = Wire(Vec(nDome + 1, Bool()))
-    val w_next_high = Wire(Vec(nDome + 1, Bool()))
-    val w_next = Wire(UInt(log2Ceil(nDome).W))
+    val w_next_low = Wire(Vec(nField + 1, Bool()))
+    val w_next_high = Wire(Vec(nField + 1, Bool()))
+    val w_next = Wire(UInt(log2Ceil(nField).W))
 
     w_next_low(0) := false.B
     w_next_high(0) := false.B
     w_next := 0.U
 
-    for (d <- 0 until nDome) {
-      when (d.U <= r_next) {
-        w_next_high(d + 1) := false.B
-        when (~w_next_low(d)) {
-          w_next_low(d + 1) := w_dome_act(d)
-          w_next := d.U
+    for (f <- 0 until nField) {
+      when (f.U <= r_next) {
+        w_next_high(f + 1) := false.B
+        when (~w_next_low(f)) {
+          w_next_low(f + 1) := w_field_act(f)
+          w_next := f.U
         }.otherwise {
-          w_next_low(d + 1) := w_next_low(d)
+          w_next_low(f + 1) := w_next_low(f)
         }
       }.otherwise {
-        w_next_low(d + 1) := w_next_low(d)
-        when (~w_next_high(d) & ~w_next_low(d)) {
-          w_next_high(d + 1) := w_dome_act(d)
-          w_next := d.U
-        }.elsewhen (~w_next_high(d) & w_next_low(d) & w_dome_act(d)) {
-          w_next_high(d + 1) := true.B
-          w_next := d.U
+        w_next_low(f + 1) := w_next_low(f)
+        when (~w_next_high(f) & ~w_next_low(f)) {
+          w_next_high(f + 1) := w_field_act(f)
+          w_next := f.U
+        }.elsewhen (~w_next_high(f) & w_next_low(f) & w_field_act(f)) {
+          w_next_high(f + 1) := true.B
+          w_next := f.U
         }.otherwise {
-          w_next_high(d + 1) := w_next_high(d)
+          w_next_high(f + 1) := w_next_high(f)
         }
       }
     }
@@ -113,16 +113,16 @@ class StaticSlct (nDome: Int, nPart: Int, nStep: Int) extends Module {
   }
 
   // ******************************
-  //             DOME
+  //            FIELD
   // ******************************
   when (w_last_step) {
-    r_dome := r_next
+    r_field := r_next
   }  
 
   // ******************************
   //            OUTPUT
   // ******************************
-  io.o_slct.dome := r_dome
+  io.o_slct.field := r_field
   io.o_slct.next := r_next
   io.o_slct.step := r_step
 }

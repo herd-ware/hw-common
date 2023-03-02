@@ -22,15 +22,15 @@ import chisel3.util._
 import herd.common.tools._
 
 
-class PDirectPolicy (useDome: Boolean, nDome: Int, nAccess: Int, nLine: Int) extends ReplacePolicy(useDome, nDome, nAccess, nLine) {
-  require((useDome && (nDome > 1)) || (!isPow2(nLine)), "Pseudo direct policy must be used only with multiple domes or for a number of lines different to 2^n. Use direct replace policy instead.")
+class PDirectPolicy (useField: Boolean, nField: Int, nAccess: Int, nLine: Int) extends ReplacePolicy(useField, nField, nAccess, nLine) {
+  require((useField && (nField > 1)) || (!isPow2(nLine)), "Pseudo direct policy must be used only with multiple fields or for a number of lines different to 2^n. Use direct replace policy instead.")
 
   // ******************************
   //             POLICY
   // ******************************
-  if (useDome && (nDome > 1) && (nLine > 1)) {
+  if (useField && (nField > 1) && (nLine > 1)) {
     val slct = Module(new SlctIndex(log2Ceil(nLine)))
-    slct.io.i_max := io.b_rsrc.get.weight(io.b_rep.dome.get)
+    slct.io.i_max := io.b_rsrc.get.weight(io.b_rep.field.get)
     slct.io.i_index := io.b_rep.fixed
 
     io.b_rep.done := false.B
@@ -51,7 +51,7 @@ class PDirectPolicy (useDome: Boolean, nDome: Int, nAccess: Int, nLine: Int) ext
   // ******************************
   for (l <- 0 until nLine) {
     io.b_line(l).free := true.B
-    if (useDome) io.b_rsrc.get.state(l).free := true.B
+    if (useField) io.b_rsrc.get.state(l).free := true.B
   }  
 }
 

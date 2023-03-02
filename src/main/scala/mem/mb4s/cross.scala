@@ -3,7 +3,7 @@
  * Created Date: 2023-02-25 12:54:02 pm                                        *
  * Author: Mathieu Escouteloup                                                 *
  * -----                                                                       *
- * Last Modified: 2023-02-25 09:28:39 pm                                       *
+ * Last Modified: 2023-03-02 01:51:03 pm                                       *
  * Modified By: Mathieu Escouteloup                                            *
  * -----                                                                       *
  * License: See LICENSE.md                                                     *
@@ -19,14 +19,14 @@ import chisel3._
 import chisel3.util._
 
 import herd.common.gen._
-import herd.common.dome._
+import herd.common.field._
 
 
 class Mb4sCrossbarReq (p: Mb4sCrossbarParams) extends Module {
   require ((p.useMem || (p.nMaster >= p.nSlave)), "Number of masters must be greater or equal than the number of slaves.")
   
   val io = IO(new Bundle {
-    val i_slct = if (p.useDomeSlct) Some(Input(new SlctBus(p.nDome, p.nPart, 1))) else None
+    val i_slct = if (p.useFieldSlct) Some(Input(new SlctBus(p.nField, p.nPart, 1))) else None
 
     val b_m = MixedVec(
       for (ma <- p.pMaster) yield {
@@ -70,9 +70,9 @@ class Mb4sCrossbarReq (p: Mb4sCrossbarParams) extends Module {
   }
   
   // ******************************
-  //           MULTI DOME
+  //          MULTI FIELD
   // ******************************
-  if (p.useDomeSlct) {
+  if (p.useFieldSlct) {
     // ------------------------------
     //            DEFAULT
     // ------------------------------
@@ -83,23 +83,23 @@ class Mb4sCrossbarReq (p: Mb4sCrossbarParams) extends Module {
 
     for (ma <- 0 until p.nMaster) {
       m_req(ma).io.b_port <> io.b_m(ma)
-      if (p.pMaster(ma).useDomeSlct) m_req(ma).io.i_slct.get := io.i_slct.get
+      if (p.pMaster(ma).useFieldSlct) m_req(ma).io.i_slct.get := io.i_slct.get
       m_req(ma).io.b_sout.ready := false.B   
 
       io.b_mnode(ma) := DontCare
-      for (ds <- 0 until p.nDomeSlct) {
-        io.b_mnode(ma).valid(ds) := false.B
+      for (fs <- 0 until p.nFieldSlct) {
+        io.b_mnode(ma).valid(fs) := false.B
       } 
     }
 
     for (s <- 0 until p.nSlave) {
       io.b_s(s).valid := false.B
-      io.b_s(s).dome.get := io.i_slct.get.dome
+      io.b_s(s).field.get := io.i_slct.get.field
       io.b_s(s).ctrl := DontCare  
 
       io.b_snode(s) := DontCare
-      for (ds <- 0 until p.nDomeSlct) {
-        io.b_snode(s).valid(ds) := false.B
+      for (fs <- 0 until p.nFieldSlct) {
+        io.b_snode(s).valid(fs) := false.B
       }
     }
 
@@ -116,16 +116,16 @@ class Mb4sCrossbarReq (p: Mb4sCrossbarParams) extends Module {
     for (ma <- 0 until p.nMaster) {
       for (s <- 0 until p.nSlave) {
         if (p.useMem) {
-          if (p.pMaster(ma).useDomeSlct) {   
+          if (p.pMaster(ma).useFieldSlct) {   
             w_mreq(ma)(s) := m_req(ma).io.b_sout.valid & w_slave(ma)(s)
           } else {
-            w_mreq(ma)(s) := m_req(ma).io.b_sout.valid & (m_req(ma).io.b_sout.dome.get === io.i_slct.get.dome) & w_slave(ma)(s)     
+            w_mreq(ma)(s) := m_req(ma).io.b_sout.valid & (m_req(ma).io.b_sout.field.get === io.i_slct.get.field) & w_slave(ma)(s)     
           }
         } else {
-          if (p.pMaster(ma).useDomeSlct) {   
+          if (p.pMaster(ma).useFieldSlct) {   
             w_mreq(ma)(s) := m_req(ma).io.b_sout.valid  
           } else {
-            w_mreq(ma)(s) := m_req(ma).io.b_sout.valid & (m_req(ma).io.b_sout.dome.get === io.i_slct.get.dome)     
+            w_mreq(ma)(s) := m_req(ma).io.b_sout.valid & (m_req(ma).io.b_sout.field.get === io.i_slct.get.field)     
           } 
         }
       }
@@ -164,16 +164,16 @@ class Mb4sCrossbarReq (p: Mb4sCrossbarParams) extends Module {
       // Default if no mem
       if (p.useMem) {
         when (w_zero(ma)) {
-          m_req(ma).io.b_sout.ready := io.b_mnode(ma).ready(io.i_slct.get.dome)
+          m_req(ma).io.b_sout.ready := io.b_mnode(ma).ready(io.i_slct.get.field)
         }
       }
 
       // Normal
       for (s <- 0 until p.nSlave) {
         when ((ma.U === w_snode(s)) & w_sreq(s)(ma)) {
-          m_req(ma).io.b_sout.ready := io.b_s(s).ready(io.i_slct.get.dome) & io.b_snode(s).ready(io.i_slct.get.dome) & io.b_mnode(ma).ready(io.i_slct.get.dome)
+          m_req(ma).io.b_sout.ready := io.b_s(s).ready(io.i_slct.get.field) & io.b_snode(s).ready(io.i_slct.get.field) & io.b_mnode(ma).ready(io.i_slct.get.field)
           
-          io.b_s(s).valid := io.b_snode(s).ready(io.i_slct.get.dome) & io.b_mnode(ma).ready(io.i_slct.get.dome)   
+          io.b_s(s).valid := io.b_snode(s).ready(io.i_slct.get.field) & io.b_mnode(ma).ready(io.i_slct.get.field)   
           io.b_s(s).ctrl.hart := m_req(ma).io.b_sout.ctrl.get.hart
           io.b_s(s).ctrl.op := m_req(ma).io.b_sout.ctrl.get.op
           if (p.pMaster(ma).useAmo) io.b_s(s).ctrl.amo.get := m_req(ma).io.b_sout.ctrl.get.amo.get
@@ -189,27 +189,27 @@ class Mb4sCrossbarReq (p: Mb4sCrossbarParams) extends Module {
     for (ma <- 0 until p.nMaster) {
       // Default if no mem
       if (p.useMem) {
-        for (ds <- 0 until p.nDomeSlct) {  
-          when (m_req(ma).io.b_sout.valid & w_zero(ma) & (ds.U === io.i_slct.get.dome)) {
-            io.b_mnode(ma).valid(ds) := true.B
-            if (!p.readOnly) io.b_mnode(ma).ctrl.get(ds).op := NODE.fromMb4s(p.pMaster(ma), m_req(ma).io.b_sout.ctrl.get.op)
-            io.b_mnode(ma).ctrl.get(ds).zero := true.B
+        for (fs <- 0 until p.nFieldSlct) {  
+          when (m_req(ma).io.b_sout.valid & w_zero(ma) & (fs.U === io.i_slct.get.field)) {
+            io.b_mnode(ma).valid(fs) := true.B
+            if (!p.readOnly) io.b_mnode(ma).ctrl.get(fs).op := NODE.fromMb4s(p.pMaster(ma), m_req(ma).io.b_sout.ctrl.get.op)
+            io.b_mnode(ma).ctrl.get(fs).zero := true.B
           }
         }
       }
 
       // Normal
       for (s <- 0 until p.nSlave) {
-        for (ds <- 0 until p.nDomeSlct) {          
-          when (w_mreq(ma).asUInt.orR & (ds.U === io.i_slct.get.dome) & (ma.U === w_snode(s)) & (s.U === w_mnode(ma))) {
-            io.b_mnode(ma).valid(ds) := io.b_s(s).ready(ds) & io.b_snode(s).ready(ds)
-            if (!p.readOnly) io.b_mnode(ma).ctrl.get(ds).op := NODE.fromMb4s(p.pMaster(ma), m_req(ma).io.b_sout.ctrl.get.op)
-            io.b_mnode(ma).ctrl.get(ds).zero := false.B
-            io.b_mnode(ma).ctrl.get(ds).node := w_mnode(ma)
+        for (fs <- 0 until p.nFieldSlct) {          
+          when (w_mreq(ma).asUInt.orR & (fs.U === io.i_slct.get.field) & (ma.U === w_snode(s)) & (s.U === w_mnode(ma))) {
+            io.b_mnode(ma).valid(fs) := io.b_s(s).ready(fs) & io.b_snode(s).ready(fs)
+            if (!p.readOnly) io.b_mnode(ma).ctrl.get(fs).op := NODE.fromMb4s(p.pMaster(ma), m_req(ma).io.b_sout.ctrl.get.op)
+            io.b_mnode(ma).ctrl.get(fs).zero := false.B
+            io.b_mnode(ma).ctrl.get(fs).node := w_mnode(ma)
 
-            io.b_snode(s).valid(ds) := io.b_s(s).ready(ds) & io.b_mnode(ma).ready(ds) 
-            if (!p.readOnly) io.b_snode(s).ctrl.get(ds).op := NODE.fromMb4s(p.pMaster(ma), m_req(ma).io.b_sout.ctrl.get.op)    
-            io.b_snode(s).ctrl.get(ds).node := w_snode(s)       
+            io.b_snode(s).valid(fs) := io.b_s(s).ready(fs) & io.b_mnode(ma).ready(fs) 
+            if (!p.readOnly) io.b_snode(s).ctrl.get(fs).op := NODE.fromMb4s(p.pMaster(ma), m_req(ma).io.b_sout.ctrl.get.op)    
+            io.b_snode(s).ctrl.get(fs).node := w_snode(s)       
           }
         }
       }
@@ -327,7 +327,7 @@ class Mb4sCrossbarReq (p: Mb4sCrossbarParams) extends Module {
       for (s <- 0 until p.nSlave) {
         when (w_mreq(ma).asUInt.orR & (ma.U === w_snode(s)) & (s.U === w_mnode(ma))) {
           io.b_mnode(ma).valid(0) := io.b_s(s).ready(0) & io.b_snode(s).ready(0)
-          if (p.useDomeTag) io.b_mnode(ma).dome.get := io.b_m(ma).dome.get
+          if (p.useFieldTag) io.b_mnode(ma).field.get := io.b_m(ma).field.get
           if (!p.readOnly) io.b_mnode(ma).ctrl.get(0).op := NODE.fromMb4s(p.pMaster(ma), io.b_m(ma).ctrl.op)
           io.b_mnode(ma).ctrl.get(0).zero := false.B
           io.b_mnode(ma).ctrl.get(0).node := w_mnode(ma)
@@ -382,7 +382,7 @@ class Mb4sCrossbarReq (p: Mb4sCrossbarParams) extends Module {
 
 class Mb4sCrossbarWrite (p: Mb4sCrossbarParams) extends Module {
   val io = IO(new Bundle {
-    val i_slct = if (p.useDomeSlct) Some(Input(new SlctBus(p.nDome, p.nPart, 1))) else None
+    val i_slct = if (p.useFieldSlct) Some(Input(new SlctBus(p.nField, p.nPart, 1))) else None
 
     val b_m = MixedVec(
       for (ma <- p.pMaster) yield {
@@ -400,9 +400,9 @@ class Mb4sCrossbarWrite (p: Mb4sCrossbarParams) extends Module {
   val w_snode = Wire(Vec(p.nSlave, UInt(log2Ceil(p.nMaster).W)))
   
   // ******************************
-  //           MULTI DOME
+  //          MULTI FIELD
   // ******************************
-  if (p.useDomeSlct) {  
+  if (p.useFieldSlct) {  
     // ------------------------------
     //            DEFAULT
     // ------------------------------
@@ -413,11 +413,11 @@ class Mb4sCrossbarWrite (p: Mb4sCrossbarParams) extends Module {
 
     for (ma <- 0 until p.nMaster) {
       m_data(ma).io.b_port <> io.b_m(ma)
-      if (p.pMaster(ma).useDomeSlct) m_data(ma).io.i_slct.get := io.i_slct.get
+      if (p.pMaster(ma).useFieldSlct) m_data(ma).io.i_slct.get := io.i_slct.get
       m_data(ma).io.b_sout.ready := false.B
 
-      for (ds <- 0 until p.nDomeSlct) { 
-        io.b_mnode(ma).ready(ds) := false.B
+      for (fs <- 0 until p.nFieldSlct) { 
+        io.b_mnode(ma).ready(fs) := false.B
       }
     }
 
@@ -425,8 +425,8 @@ class Mb4sCrossbarWrite (p: Mb4sCrossbarParams) extends Module {
       io.b_s(s) := DontCare
       io.b_s(s).valid := false.B
 
-      for (ds <- 0 until p.nDomeSlct) { 
-        io.b_snode(s).ready(ds) := false.B
+      for (fs <- 0 until p.nFieldSlct) { 
+        io.b_snode(s).ready(fs) := false.B
       }
     }
 
@@ -434,11 +434,11 @@ class Mb4sCrossbarWrite (p: Mb4sCrossbarParams) extends Module {
     //             NODE
     // ------------------------------
     for (ma <- 0 until p.nMaster) {
-      w_mnode(ma) := io.b_mnode(ma).ctrl.get(io.i_slct.get.dome).node
+      w_mnode(ma) := io.b_mnode(ma).ctrl.get(io.i_slct.get.field).node
     }
 
     for (s <- 0 until p.nSlave) {
-      w_snode(s) := io.b_snode(s).ctrl.get(io.i_slct.get.dome).node
+      w_snode(s) := io.b_snode(s).ctrl.get(io.i_slct.get.field).node
     }
 
     // ------------------------------
@@ -446,45 +446,45 @@ class Mb4sCrossbarWrite (p: Mb4sCrossbarParams) extends Module {
     // ------------------------------
     if (!p.readOnly) { 
       for (ma <- 0 until p.nMaster) {
-        when (io.b_mnode(ma).ctrl.get(io.i_slct.get.dome).w) {
+        when (io.b_mnode(ma).ctrl.get(io.i_slct.get.field).w) {
           // Default if no mem
           if (p.useMem) {
-            when (io.b_mnode(ma).ctrl.get(io.i_slct.get.dome).zero) {
-              if (p.pMaster(ma).multiDome) {
-                m_data(ma).io.b_sout.ready := io.b_mnode(ma).valid(io.i_slct.get.dome)
+            when (io.b_mnode(ma).ctrl.get(io.i_slct.get.field).zero) {
+              if (p.pMaster(ma).multiField) {
+                m_data(ma).io.b_sout.ready := io.b_mnode(ma).valid(io.i_slct.get.field)
               } else {
-                m_data(ma).io.b_sout.ready := io.b_mnode(ma).valid(io.i_slct.get.dome) & (m_data(ma).io.b_sout.dome.get === io.i_slct.get.dome)
+                m_data(ma).io.b_sout.ready := io.b_mnode(ma).valid(io.i_slct.get.field) & (m_data(ma).io.b_sout.field.get === io.i_slct.get.field)
               }
-              io.b_mnode(ma).ready(io.i_slct.get.dome) := m_data(ma).io.b_sout.valid
+              io.b_mnode(ma).ready(io.i_slct.get.field) := m_data(ma).io.b_sout.valid
             }
           }
 
           // Normal
           for (s <- 0 until p.nSlave) {
-            for (ds <- 0 until p.nDomeSlct) {
-              when ((ds.U === io.i_slct.get.dome) & (ma.U === w_snode(s) & (s.U === w_mnode(ma)) & ~io.b_mnode(ma).ctrl.get(ds).zero)) {
-                when (io.b_s(s).ready(ds) & io.b_mnode(ma).valid(ds)) {
-                  if (p.pMaster(ma).multiDome) {
-                    m_data(ma).io.b_sout.ready := io.b_s(s).ready(ds)
+            for (fs <- 0 until p.nFieldSlct) {
+              when ((fs.U === io.i_slct.get.field) & (ma.U === w_snode(s) & (s.U === w_mnode(ma)) & ~io.b_mnode(ma).ctrl.get(fs).zero)) {
+                when (io.b_s(s).ready(fs) & io.b_mnode(ma).valid(fs)) {
+                  if (p.pMaster(ma).multiField) {
+                    m_data(ma).io.b_sout.ready := io.b_s(s).ready(fs)
 
                     io.b_s(s).valid := m_data(ma).io.b_sout.valid
-                    io.b_s(s).dome.get := ds.U
+                    io.b_s(s).field.get := fs.U
                     io.b_s(s).data := m_data(ma).io.b_sout.data.get
                   } else {
-                    m_data(ma).io.b_sout.ready := io.b_s(s).ready(ds) & (ds.U === m_data(ma).io.b_sout.dome.get)
+                    m_data(ma).io.b_sout.ready := io.b_s(s).ready(fs) & (fs.U === m_data(ma).io.b_sout.field.get)
 
-                    io.b_s(s).valid := m_data(ma).io.b_sout.valid & (ds.U === m_data(ma).io.b_sout.dome.get)
-                    io.b_s(s).dome.get := ds.U
+                    io.b_s(s).valid := m_data(ma).io.b_sout.valid & (fs.U === m_data(ma).io.b_sout.field.get)
+                    io.b_s(s).field.get := fs.U
                     io.b_s(s).data := m_data(ma).io.b_sout.data.get
                   }
                 }
                 
-                if (p.pMaster(ma).multiDome) {
-                  io.b_mnode(ma).ready(ds) := m_data(ma).io.b_sout.valid & io.b_s(s).ready(ds) & io.b_snode(s).valid(ds)
-                  io.b_snode(s).ready(ds) := m_data(ma).io.b_sout.valid & io.b_s(s).ready(ds) & io.b_mnode(ma).valid(ds)
+                if (p.pMaster(ma).multiField) {
+                  io.b_mnode(ma).ready(fs) := m_data(ma).io.b_sout.valid & io.b_s(s).ready(fs) & io.b_snode(s).valid(fs)
+                  io.b_snode(s).ready(fs) := m_data(ma).io.b_sout.valid & io.b_s(s).ready(fs) & io.b_mnode(ma).valid(fs)
                 } else {
-                  io.b_mnode(ma).ready(ds) := m_data(ma).io.b_sout.valid & io.b_s(s).ready(ds) & io.b_snode(s).valid(ds) & (ds.U === m_data(ma).io.b_sout.dome.get)
-                  io.b_snode(s).ready(ds) := m_data(ma).io.b_sout.valid & io.b_s(s).ready(ds) & io.b_mnode(ma).valid(ds) & (ds.U === m_data(ma).io.b_sout.dome.get)
+                  io.b_mnode(ma).ready(fs) := m_data(ma).io.b_sout.valid & io.b_s(s).ready(fs) & io.b_snode(s).valid(fs) & (fs.U === m_data(ma).io.b_sout.field.get)
+                  io.b_snode(s).ready(fs) := m_data(ma).io.b_sout.valid & io.b_s(s).ready(fs) & io.b_mnode(ma).valid(fs) & (fs.U === m_data(ma).io.b_sout.field.get)
                 }
               }
             }
@@ -508,7 +508,7 @@ class Mb4sCrossbarWrite (p: Mb4sCrossbarParams) extends Module {
 
     for (s <- 0 until p.nSlave) {
       io.b_s(s).valid := false.B
-      if (p.useDome) io.b_s(s).dome.get := io.b_m(0).dome.get
+      if (p.useField) io.b_s(s).field.get := io.b_m(0).field.get
       io.b_s(s).data := io.b_m(0).data
 
       io.b_snode(s).ready(0) := false.B
@@ -546,7 +546,7 @@ class Mb4sCrossbarWrite (p: Mb4sCrossbarParams) extends Module {
                 io.b_m(ma).ready(0) := io.b_s(s).ready(0)
 
                 io.b_s(s).valid := io.b_m(ma).valid
-                if (p.useDomeTag) io.b_s(s).dome.get := io.b_m(ma).dome.get
+                if (p.useFieldTag) io.b_s(s).field.get := io.b_m(ma).field.get
                 io.b_s(s).data := io.b_m(ma).data
               }
 
@@ -570,7 +570,7 @@ class Mb4sCrossbarWrite (p: Mb4sCrossbarParams) extends Module {
 
 class Mb4sCrossbarRead (p: Mb4sCrossbarParams) extends Module {
   val io = IO(new Bundle {
-    val i_slct = if (p.useDomeSlct) Some(Input(new SlctBus(p.nDome, p.nPart, 1))) else None
+    val i_slct = if (p.useFieldSlct) Some(Input(new SlctBus(p.nField, p.nPart, 1))) else None
 
     val b_m = MixedVec(
       for (ma <- p.pMaster) yield {
@@ -588,9 +588,9 @@ class Mb4sCrossbarRead (p: Mb4sCrossbarParams) extends Module {
   val w_snode = Wire(Vec(p.nSlave, UInt(log2Ceil(p.nMaster).W)))
   
   // ******************************
-  //           MULTI DOME
+  //          MULTI FIELD
   // ******************************
-  if (p.useDomeSlct) {  
+  if (p.useFieldSlct) {  
     // ------------------------------
     //            DEFAULT
     // ------------------------------
@@ -603,8 +603,8 @@ class Mb4sCrossbarRead (p: Mb4sCrossbarParams) extends Module {
       io.b_m(ma) := DontCare
       io.b_m(ma).valid := false.B
 
-      for (ds <- 0 until p.nDomeSlct) { 
-        io.b_mnode(ma).ready(ds) := false.B
+      for (fs <- 0 until p.nFieldSlct) { 
+        io.b_mnode(ma).ready(fs) := false.B
       }
     }
 
@@ -613,8 +613,8 @@ class Mb4sCrossbarRead (p: Mb4sCrossbarParams) extends Module {
       m_data(s).io.i_slct.get := io.i_slct.get
       m_data(s).io.b_sout.ready := false.B
 
-      for (ds <- 0 until p.nDomeSlct) { 
-        io.b_snode(s).ready(ds) := false.B
+      for (fs <- 0 until p.nFieldSlct) { 
+        io.b_snode(s).ready(fs) := false.B
       }
     }
 
@@ -622,40 +622,40 @@ class Mb4sCrossbarRead (p: Mb4sCrossbarParams) extends Module {
     //             NODE
     // ------------------------------
     for (ma <- 0 until p.nMaster) {
-      w_mnode(ma) := io.b_mnode(ma).ctrl.get(io.i_slct.get.dome).node
+      w_mnode(ma) := io.b_mnode(ma).ctrl.get(io.i_slct.get.field).node
     }
 
     for (s <- 0 until p.nSlave) {
-      w_snode(s) := io.b_snode(s).ctrl.get(io.i_slct.get.dome).node
+      w_snode(s) := io.b_snode(s).ctrl.get(io.i_slct.get.field).node
     }
 
     // ------------------------------
     //            CONNECT
     // ------------------------------
     for (ma <- 0 until p.nMaster) {
-      when (io.b_mnode(ma).ctrl.get(io.i_slct.get.dome).r) {
+      when (io.b_mnode(ma).ctrl.get(io.i_slct.get.field).r) {
         // Default if no mem
         if (p.useMem) {
-          when (io.b_mnode(ma).ctrl.get(io.i_slct.get.dome).zero) {
-            io.b_m(ma).valid := io.b_mnode(ma).valid(io.i_slct.get.dome)
-            io.b_mnode(ma).ready(io.i_slct.get.dome) := io.b_m(ma).ready(io.i_slct.get.dome)
+          when (io.b_mnode(ma).ctrl.get(io.i_slct.get.field).zero) {
+            io.b_m(ma).valid := io.b_mnode(ma).valid(io.i_slct.get.field)
+            io.b_mnode(ma).ready(io.i_slct.get.field) := io.b_m(ma).ready(io.i_slct.get.field)
           }
         }
 
         // Normal
         for (s <- 0 until p.nSlave) {
-          for (ds <- 0 until p.nDomeSlct) {
-            when ((ds.U === io.i_slct.get.dome) & (ma.U === w_snode(s) & (s.U === w_mnode(ma)) & ~io.b_mnode(ma).ctrl.get(ds).zero)) {
-              when (io.b_mnode(ma).valid(ds) & io.b_snode(s).valid(ds)) {
+          for (fs <- 0 until p.nFieldSlct) {
+            when ((fs.U === io.i_slct.get.field) & (ma.U === w_snode(s) & (s.U === w_mnode(ma)) & ~io.b_mnode(ma).ctrl.get(fs).zero)) {
+              when (io.b_mnode(ma).valid(fs) & io.b_snode(s).valid(fs)) {
                 io.b_m(ma).valid := m_data(s).io.b_sout.valid
-                io.b_m(ma).dome.get := ds.U
+                io.b_m(ma).field.get := fs.U
                 io.b_m(ma).data := m_data(s).io.b_sout.data.get
 
-                m_data(s).io.b_sout.ready := io.b_m(ma).ready(ds) & io.b_mnode(ma).valid(ds) & io.b_snode(s).valid(ds)
+                m_data(s).io.b_sout.ready := io.b_m(ma).ready(fs) & io.b_mnode(ma).valid(fs) & io.b_snode(s).valid(fs)
               }
 
-              io.b_mnode(ma).ready(ds) := io.b_m(ma).ready(ds) & m_data(s).io.b_sout.valid & io.b_snode(s).valid(ds)
-              io.b_snode(s).ready(ds) := io.b_m(ma).ready(ds) & m_data(s).io.b_sout.valid & io.b_mnode(ma).valid(ds)
+              io.b_mnode(ma).ready(fs) := io.b_m(ma).ready(fs) & m_data(s).io.b_sout.valid & io.b_snode(s).valid(fs)
+              io.b_snode(s).ready(fs) := io.b_m(ma).ready(fs) & m_data(s).io.b_sout.valid & io.b_mnode(ma).valid(fs)
             }
           }
         }
@@ -671,7 +671,7 @@ class Mb4sCrossbarRead (p: Mb4sCrossbarParams) extends Module {
     // ------------------------------
     for (ma <- 0 until p.nMaster) {
       io.b_m(ma).valid := false.B
-      if (p.useDome) io.b_m(ma).dome.get := io.b_s(0).dome.get
+      if (p.useField) io.b_m(ma).field.get := io.b_s(0).field.get
       io.b_m(ma).data := io.b_s(0).data
 
       io.b_mnode(ma).ready(0) := false.B        
@@ -712,7 +712,7 @@ class Mb4sCrossbarRead (p: Mb4sCrossbarParams) extends Module {
           when ((ma.U === w_snode(s)) & (s.U === w_mnode(ma)) & ~io.b_mnode(ma).ctrl.get(0).zero) {
             when (io.b_snode(s).valid(0) & io.b_mnode(ma).valid(0)) {
               io.b_m(ma).valid := io.b_s(s).valid
-              if (p.useDomeTag) io.b_m(ma).dome.get := io.b_s(s).dome.get
+              if (p.useFieldTag) io.b_m(ma).field.get := io.b_s(s).field.get
               io.b_m(ma).data := io.b_s(s).data
 
               io.b_s(s).ready(0) := io.b_m(ma).ready(0)
@@ -736,11 +736,11 @@ class Mb4sCrossbarRead (p: Mb4sCrossbarParams) extends Module {
 
 class Mb4sCrossbar (p: Mb4sCrossbarParams) extends Module {
   val io = IO(new Bundle {   
-    val b_dome = if (p.useDome) Some(Vec(p.nDome, new DomeIO(p.nAddrBit, p.nDataBit))) else None
+    val b_field = if (p.useField) Some(Vec(p.nField, new FieldIO(p.nAddrBit, p.nDataBit))) else None
 
-    val i_slct_req = if (p.useDomeSlct) Some(Input(new SlctBus(p.nDome, p.nPart, 1))) else None
-    val i_slct_write = if (p.useDomeSlct) Some(Input(new SlctBus(p.nDome, p.nPart, 1))) else None
-    val i_slct_read = if (p.useDomeSlct) Some(Input(new SlctBus(p.nDome, p.nPart, 1))) else None
+    val i_slct_req = if (p.useFieldSlct) Some(Input(new SlctBus(p.nField, p.nPart, 1))) else None
+    val i_slct_write = if (p.useFieldSlct) Some(Input(new SlctBus(p.nField, p.nPart, 1))) else None
+    val i_slct_read = if (p.useFieldSlct) Some(Input(new SlctBus(p.nField, p.nPart, 1))) else None
 
     val b_m = MixedVec(
       for (ma <- p.pMaster) yield {
@@ -757,17 +757,17 @@ class Mb4sCrossbar (p: Mb4sCrossbarParams) extends Module {
   val m_write = Module(new Mb4sCrossbarWrite(p))
   val m_read = Module(new Mb4sCrossbarRead(p))  
 
-  val init_mdone = Wire(Vec(p.nMaster, Vec(p.nDomeSlct, Vec(2, Bool()))))
-  val init_sdone = Wire(Vec(p.nSlave, Vec(p.nDomeSlct, Vec(2, Bool()))))
+  val init_mdone = Wire(Vec(p.nMaster, Vec(p.nFieldSlct, Vec(2, Bool()))))
+  val init_sdone = Wire(Vec(p.nSlave, Vec(p.nFieldSlct, Vec(2, Bool()))))
 
-  for (ds <- 0 until p.nDomeSlct) {
+  for (fs <- 0 until p.nFieldSlct) {
     for (ma <- 0 until p.nMaster) {
-      init_mdone(ma)(ds)(0) := 0.B
-      init_mdone(ma)(ds)(1) := 0.B
+      init_mdone(ma)(fs)(0) := 0.B
+      init_mdone(ma)(fs)(1) := 0.B
     }
     for (s <- 0 until p.nSlave) {
-      init_sdone(s)(ds)(0) := 0.B
-      init_sdone(s)(ds)(1) := 0.B
+      init_sdone(s)(fs)(0) := 0.B
+      init_sdone(s)(fs)(1) := 0.B
     }
   }
 
@@ -800,33 +800,33 @@ class Mb4sCrossbar (p: Mb4sCrossbarParams) extends Module {
   //            MASTER
   // ------------------------------
   for (ma <- 0 until p.nMaster) {
-    for (ds <- 0 until p.nDomeSlct) {
-      m_mnode(ma).io.i_flush(ds) := false.B
+    for (fs <- 0 until p.nFieldSlct) {
+      m_mnode(ma).io.i_flush(fs) := false.B
     }
 
     m_mnode(ma).io.b_din(0) <> m_req.io.b_mnode(ma)
     m_write.io.b_mnode(ma) <> m_mnode(ma).io.b_dout(0)
     m_read.io.b_mnode(ma) <> m_mnode(ma).io.b_dout(0)
 
-    for (ds <- 0 until p.nDomeSlct) {
-      m_write.io.b_mnode(ma).valid(ds) := m_mnode(ma).io.b_dout(0).valid(ds) & m_mnode(ma).io.b_dout(0).ctrl.get(ds).w & ~r_mdone(ma)(ds)(0)
-      m_read.io.b_mnode(ma).valid(ds) := m_mnode(ma).io.b_dout(0).valid(ds) & m_mnode(ma).io.b_dout(0).ctrl.get(ds).r & ~r_mdone(ma)(ds)(1)
-      m_mnode(ma).io.b_dout(0).ready(ds) := (~m_mnode(ma).io.b_dout(0).ctrl.get(ds).w | r_mdone(ma)(ds)(0) | m_write.io.b_mnode(ma).ready(ds)) & (~m_mnode(ma).io.b_dout(0).ctrl.get(ds).r | r_mdone(ma)(ds)(1) | m_read.io.b_mnode(ma).ready(ds))
+    for (fs <- 0 until p.nFieldSlct) {
+      m_write.io.b_mnode(ma).valid(fs) := m_mnode(ma).io.b_dout(0).valid(fs) & m_mnode(ma).io.b_dout(0).ctrl.get(fs).w & ~r_mdone(ma)(fs)(0)
+      m_read.io.b_mnode(ma).valid(fs) := m_mnode(ma).io.b_dout(0).valid(fs) & m_mnode(ma).io.b_dout(0).ctrl.get(fs).r & ~r_mdone(ma)(fs)(1)
+      m_mnode(ma).io.b_dout(0).ready(fs) := (~m_mnode(ma).io.b_dout(0).ctrl.get(fs).w | r_mdone(ma)(fs)(0) | m_write.io.b_mnode(ma).ready(fs)) & (~m_mnode(ma).io.b_dout(0).ctrl.get(fs).r | r_mdone(ma)(fs)(1) | m_read.io.b_mnode(ma).ready(fs))
 
-      when (m_mnode(ma).io.b_dout(0).valid(ds) & m_mnode(ma).io.b_dout(0).ctrl.get(ds).a) {
-        when (r_mdone(ma)(ds)(1) | m_read.io.b_mnode(ma).ready(ds)) {
-          r_mdone(ma)(ds)(0) := false.B
+      when (m_mnode(ma).io.b_dout(0).valid(fs) & m_mnode(ma).io.b_dout(0).ctrl.get(fs).a) {
+        when (r_mdone(ma)(fs)(1) | m_read.io.b_mnode(ma).ready(fs)) {
+          r_mdone(ma)(fs)(0) := false.B
         }.otherwise {
-          r_mdone(ma)(ds)(0) := r_mdone(ma)(ds)(0) | m_write.io.b_mnode(ma).ready(ds)
+          r_mdone(ma)(fs)(0) := r_mdone(ma)(fs)(0) | m_write.io.b_mnode(ma).ready(fs)
         }
-        when (r_mdone(ma)(ds)(0) | m_write.io.b_mnode(ma).ready(ds)) {
-          r_mdone(ma)(ds)(1) := false.B
+        when (r_mdone(ma)(fs)(0) | m_write.io.b_mnode(ma).ready(fs)) {
+          r_mdone(ma)(fs)(1) := false.B
         }.otherwise {
-          r_mdone(ma)(ds)(1) := r_mdone(ma)(ds)(1) | m_read.io.b_mnode(ma).ready(ds)
+          r_mdone(ma)(fs)(1) := r_mdone(ma)(fs)(1) | m_read.io.b_mnode(ma).ready(fs)
         }
       }.otherwise {
-        r_mdone(ma)(ds)(0) := false.B
-        r_mdone(ma)(ds)(1) := false.B
+        r_mdone(ma)(fs)(0) := false.B
+        r_mdone(ma)(fs)(1) := false.B
       }
     } 
   }
@@ -835,50 +835,50 @@ class Mb4sCrossbar (p: Mb4sCrossbarParams) extends Module {
   //             SLAVE
   // ------------------------------
   for (s <- 0 until p.nSlave) {
-    for (ds <- 0 until p.nDomeSlct) {
-      m_snode(s).io.i_flush(ds) := false.B
+    for (fs <- 0 until p.nFieldSlct) {
+      m_snode(s).io.i_flush(fs) := false.B
     }
 
     m_snode(s).io.b_din(0) <> m_req.io.b_snode(s)
     m_write.io.b_snode(s) <> m_snode(s).io.b_dout(0)
     m_read.io.b_snode(s) <> m_snode(s).io.b_dout(0)
 
-    for (ds <- 0 until p.nDomeSlct) {
-      m_write.io.b_snode(s).valid(ds) := m_snode(s).io.b_dout(0).valid(ds) & m_snode(s).io.b_dout(0).ctrl.get(ds).w & ~r_sdone(s)(ds)(0)
-      m_read.io.b_snode(s).valid(ds) := m_snode(s).io.b_dout(0).valid(ds) & m_snode(s).io.b_dout(0).ctrl.get(ds).r & ~r_sdone(s)(ds)(1)
-      m_snode(s).io.b_dout(0).ready(ds) := (~m_snode(s).io.b_dout(0).ctrl.get(ds).w | r_sdone(s)(ds)(0) | m_write.io.b_snode(s).ready(ds)) & (~m_snode(s).io.b_dout(0).ctrl.get(ds).r | r_sdone(s)(ds)(1) | m_read.io.b_snode(s).ready(ds))
+    for (fs <- 0 until p.nFieldSlct) {
+      m_write.io.b_snode(s).valid(fs) := m_snode(s).io.b_dout(0).valid(fs) & m_snode(s).io.b_dout(0).ctrl.get(fs).w & ~r_sdone(s)(fs)(0)
+      m_read.io.b_snode(s).valid(fs) := m_snode(s).io.b_dout(0).valid(fs) & m_snode(s).io.b_dout(0).ctrl.get(fs).r & ~r_sdone(s)(fs)(1)
+      m_snode(s).io.b_dout(0).ready(fs) := (~m_snode(s).io.b_dout(0).ctrl.get(fs).w | r_sdone(s)(fs)(0) | m_write.io.b_snode(s).ready(fs)) & (~m_snode(s).io.b_dout(0).ctrl.get(fs).r | r_sdone(s)(fs)(1) | m_read.io.b_snode(s).ready(fs))
 
-      when (m_snode(s).io.b_dout(0).valid(ds) & m_snode(s).io.b_dout(0).ctrl.get(ds).a) {
-        when (r_sdone(s)(ds)(1) | m_read.io.b_snode(s).ready(ds)) {
-          r_sdone(s)(ds)(0) := false.B
+      when (m_snode(s).io.b_dout(0).valid(fs) & m_snode(s).io.b_dout(0).ctrl.get(fs).a) {
+        when (r_sdone(s)(fs)(1) | m_read.io.b_snode(s).ready(fs)) {
+          r_sdone(s)(fs)(0) := false.B
         }.otherwise {
-          r_sdone(s)(ds)(0) := r_sdone(s)(ds)(0) | m_write.io.b_snode(s).ready(ds)
+          r_sdone(s)(fs)(0) := r_sdone(s)(fs)(0) | m_write.io.b_snode(s).ready(fs)
         }
         
-        when (r_sdone(s)(ds)(0) | m_write.io.b_snode(s).ready(ds)) {
-          r_sdone(s)(ds)(1) := false.B
+        when (r_sdone(s)(fs)(0) | m_write.io.b_snode(s).ready(fs)) {
+          r_sdone(s)(fs)(1) := false.B
         }.otherwise {
-          r_sdone(s)(ds)(1) := r_sdone(s)(ds)(1) | m_read.io.b_snode(s).ready(ds)
+          r_sdone(s)(fs)(1) := r_sdone(s)(fs)(1) | m_read.io.b_snode(s).ready(fs)
         }
       }.otherwise {
-        r_sdone(s)(ds)(0) := false.B
-        r_sdone(s)(ds)(1) := false.B
+        r_sdone(s)(fs)(0) := false.B
+        r_sdone(s)(fs)(1) := false.B
       }
     } 
   }
 
   // ******************************
-  //          SELECT DOME
+  //          SELECT FIELD
   // ******************************
-  if (p.useDomeSlct) {
+  if (p.useFieldSlct) {
     m_req.io.i_slct.get := io.i_slct_req.get
     m_write.io.i_slct.get := io.i_slct_write.get  
     m_read.io.i_slct.get := io.i_slct_read.get     
   }
 
-  if (p.useDome) {
-    for (d <- 0 until p.nDome) {
-      io.b_dome.get(d).free := true.B
+  if (p.useField) {
+    for (f <- 0 until p.nField) {
+      io.b_field.get(f).free := true.B
     }
   }
   

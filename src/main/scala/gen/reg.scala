@@ -3,7 +3,7 @@
  * Created Date: 2023-02-25 12:54:02 pm                                        *
  * Author: Mathieu Escouteloup                                                 *
  * -----                                                                       *
- * Last Modified: 2023-02-25 09:25:57 pm                                       *
+ * Last Modified: 2023-03-02 08:52:56 am                                       *
  * Modified By: Mathieu Escouteloup                                            *
  * -----                                                                       *
  * License: See LICENSE.md                                                     *
@@ -18,7 +18,7 @@ package herd.common.gen
 import chisel3._
 import chisel3.util._
 
-import herd.common.dome._
+import herd.common.field._
 
 
 class GenReg[TC <: Data, TD <: Data](p: GenParams, tc: TC, td: TD, useReset: Boolean, useUpdate: Boolean, isPipe: Boolean) extends Module {  
@@ -105,7 +105,7 @@ class GenDReg[TC <: Data, TD <: Data](p: GenParams, tc: TC, td: TD, useReset: Bo
   // ******************************
   val io = IO(new Bundle {
     val i_reset = if (useReset) Some(Input(new GenDVBus(p, tc, td))) else None
-    val i_flush = Input(Vec(p.nDomeSlct, Bool()))
+    val i_flush = Input(Vec(p.nFieldSlct, Bool()))
 
     val b_din = Flipped(new GenDRVIO(p, tc, td))
     val i_up = if (useUpdate) Some(Input(new GenDBus(p, tc, td))) else None
@@ -125,8 +125,8 @@ class GenDReg[TC <: Data, TD <: Data](p: GenParams, tc: TC, td: TD, useReset: Bo
     init_reg := io.i_reset.get
   } else {
     init_reg := DontCare
-    for (ds <- 0 until p.nDomeSlct) {    
-      init_reg.valid(ds) := false.B
+    for (fs <- 0 until p.nFieldSlct) {    
+      init_reg.valid(fs) := false.B
     }
   }  
 
@@ -135,39 +135,39 @@ class GenDReg[TC <: Data, TD <: Data](p: GenParams, tc: TC, td: TD, useReset: Bo
   // ******************************
   //            OUTPUT
   // ******************************  
-  for (ds <- 0 until p.nDomeSlct) {
-    r_reg.valid(ds) := r_reg.valid(ds) & ~io.b_dout.ready(ds)
-    io.b_dout.valid(ds) := r_reg.valid(ds)
-    if (p.useDomeTag)     io.b_dout.dome.get := r_reg.dome.get
-    if (tc.getWidth > 0)  io.b_dout.ctrl.get(ds) := r_reg.ctrl.get(ds)
-    if (td.getWidth > 0)  io.b_dout.data.get(ds) := r_reg.data.get(ds)
+  for (fs <- 0 until p.nFieldSlct) {
+    r_reg.valid(fs) := r_reg.valid(fs) & ~io.b_dout.ready(fs)
+    io.b_dout.valid(fs) := r_reg.valid(fs)
+    if (p.useFieldTag)     io.b_dout.field.get := r_reg.field.get
+    if (tc.getWidth > 0)  io.b_dout.ctrl.get(fs) := r_reg.ctrl.get(fs)
+    if (td.getWidth > 0)  io.b_dout.data.get(fs) := r_reg.data.get(fs)
   }
 
   // ******************************
   //             INPUT
   // ******************************
-  val w_lock = Wire(Vec(p.nDomeSlct, Bool()))
+  val w_lock = Wire(Vec(p.nFieldSlct, Bool()))
 
-  if (p.useDomeSlct) {
-    for (ds <- 0 until p.nDomeSlct) {
+  if (p.useFieldSlct) {
+    for (fs <- 0 until p.nFieldSlct) {
       if (isPipe) {
-        w_lock(ds) := r_reg.valid(ds) & ~io.b_dout.ready(ds)
+        w_lock(fs) := r_reg.valid(fs) & ~io.b_dout.ready(fs)
       } else {
-        w_lock(ds) := r_reg.valid(ds)
+        w_lock(fs) := r_reg.valid(fs)
       }
 
-      io.b_din.ready(ds) := ~w_lock(ds)
+      io.b_din.ready(fs) := ~w_lock(fs)
     
-      when (io.b_din.valid(ds) & ~w_lock(ds)) {
-        r_reg.valid(ds) := true.B
-        if (tc.getWidth > 0) r_reg.ctrl.get(ds) := io.b_din.ctrl.get(ds)
-        if (td.getWidth > 0) r_reg.data.get(ds) := io.b_din.data.get(ds)
+      when (io.b_din.valid(fs) & ~w_lock(fs)) {
+        r_reg.valid(fs) := true.B
+        if (tc.getWidth > 0) r_reg.ctrl.get(fs) := io.b_din.ctrl.get(fs)
+        if (td.getWidth > 0) r_reg.data.get(fs) := io.b_din.data.get(fs)
       }.otherwise {
         if (useUpdate) {
-          for (ds <- 0 until p.nDomeSlct) {
-            when (r_reg.valid(ds) & ~io.b_dout.ready(ds)) {
-              if (tc.getWidth > 0) r_reg.ctrl.get(ds) := io.i_up.get.ctrl.get(ds)
-              if (td.getWidth > 0) r_reg.data.get(ds) := io.i_up.get.data.get(ds)
+          for (fs <- 0 until p.nFieldSlct) {
+            when (r_reg.valid(fs) & ~io.b_dout.ready(fs)) {
+              if (tc.getWidth > 0) r_reg.ctrl.get(fs) := io.i_up.get.ctrl.get(fs)
+              if (td.getWidth > 0) r_reg.data.get(fs) := io.i_up.get.data.get(fs)
             }
           }    
         }
@@ -184,7 +184,7 @@ class GenDReg[TC <: Data, TD <: Data](p: GenParams, tc: TC, td: TD, useReset: Bo
     
     when (io.b_din.valid(0) & ~w_lock(0)) {
       r_reg.valid(0) := true.B
-      if (p.useDomeTag) r_reg.dome.get := io.b_din.dome.get
+      if (p.useFieldTag) r_reg.field.get := io.b_din.field.get
       if (tc.getWidth > 0) r_reg.ctrl.get(0) := io.b_din.ctrl.get(0)
       if (td.getWidth > 0) r_reg.data.get(0) := io.b_din.data.get(0)
     }.otherwise {
@@ -200,9 +200,9 @@ class GenDReg[TC <: Data, TD <: Data](p: GenParams, tc: TC, td: TD, useReset: Bo
   // ******************************
   //          FLUSH & ZERO
   // ******************************
-  for (ds <- 0 until p.nDomeSlct) {
-    when (io.i_flush(ds)) {
-      r_reg.valid(ds) := false.B
+  for (fs <- 0 until p.nFieldSlct) {
+    when (io.i_flush(fs)) {
+      r_reg.valid(fs) := false.B
     }
   }
 
@@ -219,16 +219,16 @@ class GenSReg[TC <: Data, TD <: Data](p: GenParams, tc: TC, td: TD, useReset: Bo
   // ******************************
   val io = IO(new Bundle {
     val i_reset = if (useReset) Some(Input(new GenDVBus(p, tc, td))) else None
-    val i_flush = Input(Vec(p.nDomeSlct, Bool()))
+    val i_flush = Input(Vec(p.nFieldSlct, Bool()))
 
-    val i_slct_in = if (p.useDomeSlct) Some(Input(new SlctBus(p.nDome, p.nPart, 1))) else None
+    val i_slct_in = if (p.useFieldSlct) Some(Input(new SlctBus(p.nField, p.nPart, 1))) else None
     val b_sin = Flipped(new GenSRVIO(p, tc, td))
     val i_up = if (useUpdate) Some(Input(new GenDBus(p, tc, td))) else None
 
     val o_val = Output(new GenDVBus(p, tc, td))
     val o_reg = Output(new GenDVBus(p, tc, td))
     
-    val i_slct_out = if (p.useDomeSlct) Some(Input(new SlctBus(p.nDome, p.nPart, 1))) else None
+    val i_slct_out = if (p.useFieldSlct) Some(Input(new SlctBus(p.nField, p.nPart, 1))) else None
     val b_sout = new GenSRVIO(p, tc, td)
   })
 
@@ -240,7 +240,7 @@ class GenSReg[TC <: Data, TD <: Data](p: GenParams, tc: TC, td: TD, useReset: Bo
   m_reg.io.i_flush := io.i_flush
 
   // Write
-  if (p.useDomeSlct) m_in.io.i_slct.get := io.i_slct_in.get
+  if (p.useFieldSlct) m_in.io.i_slct.get := io.i_slct_in.get
   m_in.io.b_sin <> io.b_sin
 
   // Register
@@ -250,7 +250,7 @@ class GenSReg[TC <: Data, TD <: Data](p: GenParams, tc: TC, td: TD, useReset: Bo
   io.o_reg := m_reg.io.o_reg
 
   // Read
-  if (p.useDomeSlct) m_out.io.i_slct.get := io.i_slct_out.get
+  if (p.useFieldSlct) m_out.io.i_slct.get := io.i_slct_out.get
   m_out.io.b_din <> m_reg.io.b_dout
   io.b_sout <> m_out.io.b_sout
 }

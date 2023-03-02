@@ -3,7 +3,7 @@
  * Created Date: 2023-02-25 12:54:02 pm                                        *
  * Author: Mathieu Escouteloup                                                 *
  * -----                                                                       *
- * Last Modified: 2023-02-27 05:57:22 pm                                       *
+ * Last Modified: 2023-03-02 01:26:57 pm                                       *
  * Modified By: Mathieu Escouteloup                                            *
  * -----                                                                       *
  * License: See LICENSE.md                                                     *
@@ -23,8 +23,8 @@ import chisel3.util._
 //           CONSTANTS
 // ******************************
 object CST {
-  def MAXCFG  = 32
-  def MAXTL   = 2
+  def MAXSTRUCT = 32
+  def MAXTL     = 2
 }
 
 // ******************************

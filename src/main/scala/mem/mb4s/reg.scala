@@ -3,7 +3,7 @@
  * Created Date: 2023-02-25 12:54:02 pm                                        *
  * Author: Mathieu Escouteloup                                                 *
  * -----                                                                       *
- * Last Modified: 2023-02-25 09:28:43 pm                                       *
+ * Last Modified: 2023-03-02 01:51:54 pm                                       *
  * Modified By: Mathieu Escouteloup                                            *
  * -----                                                                       *
  * License: See LICENSE.md                                                     *
@@ -20,19 +20,19 @@ import chisel3.util._
 
 import herd.common.gen._
 import herd.common.tools._
-import herd.common.dome._
+import herd.common.field._
 
 
 class Mb4sReqDReg(p: Mb4sReqParams, useReg: Boolean) extends Module {
   val io = IO(new Bundle {  
     val b_port = Flipped(new Mb4sReqIO(p))
 
-    val o_back = Output(Vec(p.nDomeSlct, Bool()))
+    val o_back = Output(Vec(p.nFieldSlct, Bool()))
 
     val b_dout = new GenDRVIO(p, new Mb4sReqBus(p), UInt(0.W))
   })  
 
-  val w_lock = Wire(Vec(p.nDomeSlct, Bool()))
+  val w_lock = Wire(Vec(p.nFieldSlct, Bool()))
 
   // ******************************
   //          BACK REGISTER
@@ -41,33 +41,33 @@ class Mb4sReqDReg(p: Mb4sReqParams, useReg: Boolean) extends Module {
 
   val w_back = Wire(new GenDVBus(p, new Mb4sReqBus(p), UInt(0.W)))  
 
-  for (ds <- 0 until p.nDomeSlct) {
-    io.b_port.ready(ds) := m_back.io.b_din.ready(ds)
+  for (fs <- 0 until p.nFieldSlct) {
+    io.b_port.ready(fs) := m_back.io.b_din.ready(fs)
 
     // Write
-    m_back.io.i_flush(ds) := false.B
-    if (p.useDomeSlct) {
-      m_back.io.b_din.valid(ds) := io.b_port.valid & (ds.U === io.b_port.dome.get) & w_lock(ds)
+    m_back.io.i_flush(fs) := false.B
+    if (p.useFieldSlct) {
+      m_back.io.b_din.valid(fs) := io.b_port.valid & (fs.U === io.b_port.field.get) & w_lock(fs)
     } else {
       m_back.io.b_din.valid(0) := io.b_port.valid & w_lock(0)
     }
-    if (p.useDomeTag) m_back.io.b_din.dome.get := io.b_port.dome.get
-    m_back.io.b_din.ctrl.get(ds) := io.b_port.ctrl
+    if (p.useFieldTag) m_back.io.b_din.field.get := io.b_port.field.get
+    m_back.io.b_din.ctrl.get(fs) := io.b_port.ctrl
 
     // Read
-    m_back.io.b_dout.ready(ds) := ~w_lock(ds)
-    when (m_back.io.b_dout.valid(ds)) {
-      w_back.valid(ds) := true.B
-      if (p.useDomeTag) w_back.dome.get := m_back.io.b_dout.dome.get
-      w_back.ctrl.get(ds) := m_back.io.b_dout.ctrl.get(ds)
+    m_back.io.b_dout.ready(fs) := ~w_lock(fs)
+    when (m_back.io.b_dout.valid(fs)) {
+      w_back.valid(fs) := true.B
+      if (p.useFieldTag) w_back.field.get := m_back.io.b_dout.field.get
+      w_back.ctrl.get(fs) := m_back.io.b_dout.ctrl.get(fs)
     }.otherwise {
-      if (p.useDomeSlct) {
-        w_back.valid(ds) := io.b_port.valid & (ds.U === io.b_port.dome.get)
+      if (p.useFieldSlct) {
+        w_back.valid(fs) := io.b_port.valid & (fs.U === io.b_port.field.get)
       } else {
         w_back.valid(0) := io.b_port.valid
       }
-      if (p.useDomeTag) w_back.dome.get := m_back.io.b_dout.dome.get
-      w_back.ctrl.get(ds) := io.b_port.ctrl
+      if (p.useFieldTag) w_back.field.get := m_back.io.b_dout.field.get
+      w_back.ctrl.get(fs) := io.b_port.ctrl
     }
   }  
 
@@ -81,14 +81,14 @@ class Mb4sReqDReg(p: Mb4sReqParams, useReg: Boolean) extends Module {
     val m_reg = Module(new GenDReg(p, new Mb4sReqBus(p), UInt(0.W), false, false, true))
 
     // Write
-    for (ds <- 0 until p.nDomeSlct) {
-      m_reg.io.i_flush(ds) := false.B
+    for (fs <- 0 until p.nFieldSlct) {
+      m_reg.io.i_flush(fs) := false.B
 
-      w_lock(ds) := ~m_reg.io.b_din.ready(ds)
+      w_lock(fs) := ~m_reg.io.b_din.ready(fs)
 
-      m_reg.io.b_din.valid(ds) := w_back.valid(ds)
-      if (p.useDomeTag) m_reg.io.b_din.dome.get := w_back.dome.get
-      m_reg.io.b_din.ctrl.get(ds) := w_back.ctrl.get(ds)
+      m_reg.io.b_din.valid(fs) := w_back.valid(fs)
+      if (p.useFieldTag) m_reg.io.b_din.field.get := w_back.field.get
+      m_reg.io.b_din.ctrl.get(fs) := w_back.ctrl.get(fs)
     } 
       
     // Outputs
@@ -98,21 +98,21 @@ class Mb4sReqDReg(p: Mb4sReqParams, useReg: Boolean) extends Module {
   //            WITHOUT
   // ------------------------------
   } else {
-    for (ds <- 0 until p.nDomeSlct) {
-      w_lock(ds) := ~io.b_dout.ready(ds)
+    for (fs <- 0 until p.nFieldSlct) {
+      w_lock(fs) := ~io.b_dout.ready(fs)
     } 
 
     // Outputs
     io.b_dout.valid := w_back.valid
-    if (p.useDomeTag) io.b_dout.dome.get := w_back.dome.get
+    if (p.useFieldTag) io.b_dout.field.get := w_back.field.get
     io.b_dout.ctrl.get := w_back.ctrl.get        
   }
 
   // ******************************
   //        EXTERNAL ACCESS
   // ******************************
-  for (ds <- 0 until p.nDomeSlct) {
-    io.o_back(ds) := m_back.io.o_val.valid(ds)
+  for (fs <- 0 until p.nFieldSlct) {
+    io.o_back(fs) := m_back.io.o_val.valid(fs)
   }
 
   // ******************************
@@ -127,9 +127,9 @@ class Mb4sReqSReg(p: Mb4sReqParams, useReg: Boolean) extends Module {
   val io = IO(new Bundle {  
     val b_port = Flipped(new Mb4sReqIO(p))
 
-    val o_back = Output(Vec(p.nDomeSlct, Bool()))
+    val o_back = Output(Vec(p.nFieldSlct, Bool()))
 
-    val i_slct = if (p.useDomeSlct) Some(Input(new SlctBus(p.nDome, p.nPart, 1))) else None 
+    val i_slct = if (p.useFieldSlct) Some(Input(new SlctBus(p.nField, p.nPart, 1))) else None 
     val b_sout = new GenSRVIO(p, new Mb4sReqBus(p), UInt(0.W))  
   })  
 
@@ -141,7 +141,7 @@ class Mb4sReqSReg(p: Mb4sReqParams, useReg: Boolean) extends Module {
   io.o_back := m_reg.io.o_back
 
   m_mux.io.b_din <> m_reg.io.b_dout
-  if (p.useDomeSlct) m_mux.io.i_slct.get := io.i_slct.get
+  if (p.useFieldSlct) m_mux.io.i_slct.get := io.i_slct.get
   io.b_sout <> m_mux.io.b_sout
 
   // ******************************
@@ -156,12 +156,12 @@ class Mb4sDataDReg(p: Mb4sDataParams) extends Module {
   val io = IO(new Bundle {  
     val b_port = Flipped(new Mb4sDataIO(p))
 
-    val o_back = Output(Vec(p.nDomeSlct, Bool()))
+    val o_back = Output(Vec(p.nFieldSlct, Bool()))
 
     val b_dout = new GenDRVIO(p, UInt(0.W), UInt((p.nDataByte * 8).W))
   })
 
-  val w_lock = Wire(Vec(p.nDomeSlct, Bool()))
+  val w_lock = Wire(Vec(p.nFieldSlct, Bool()))
 
   // ******************************
   //         OUTPUT REGISTER
@@ -169,45 +169,45 @@ class Mb4sDataDReg(p: Mb4sDataParams) extends Module {
   val m_back = Module(new GenDReg(p, UInt(0.W), UInt((p.nDataByte * 8).W), false, false, false))
 
   // Write
-  for (ds <- 0 until p.nDomeSlct) {
-    m_back.io.i_flush(ds) := false.B
+  for (fs <- 0 until p.nFieldSlct) {
+    m_back.io.i_flush(fs) := false.B
 
-    io.b_port.ready(ds) := m_back.io.b_din.ready(ds)
+    io.b_port.ready(fs) := m_back.io.b_din.ready(fs)
 
-    if (p.useDomeSlct) {
-      m_back.io.b_din.valid(ds) := io.b_port.valid & w_lock(ds) & (ds.U === io.b_port.dome.get)
+    if (p.useFieldSlct) {
+      m_back.io.b_din.valid(fs) := io.b_port.valid & w_lock(fs) & (fs.U === io.b_port.field.get)
     } else {
-      m_back.io.b_din.valid(0) := io.b_port.valid & w_lock(ds)
+      m_back.io.b_din.valid(0) := io.b_port.valid & w_lock(fs)
     }    
-    if (p.useDomeTag) m_back.io.b_din.dome.get := io.b_port.dome.get
-    m_back.io.b_din.data.get(ds) := io.b_port.data
+    if (p.useFieldTag) m_back.io.b_din.field.get := io.b_port.field.get
+    m_back.io.b_din.data.get(fs) := io.b_port.data
   }
 
   // Read
-  for (ds <- 0 until p.nDomeSlct) {
-    w_lock(ds) := ~io.b_dout.ready(ds)
+  for (fs <- 0 until p.nFieldSlct) {
+    w_lock(fs) := ~io.b_dout.ready(fs)
 
-    m_back.io.b_dout.ready(ds) := ~w_lock(ds) 
-    when (m_back.io.b_dout.valid(ds)) {
-      io.b_dout.valid(ds) := true.B
-      if (p.useDomeTag) io.b_dout.dome.get := m_back.io.b_dout.dome.get
-      io.b_dout.data.get(ds) := m_back.io.b_dout.data.get(ds)
+    m_back.io.b_dout.ready(fs) := ~w_lock(fs) 
+    when (m_back.io.b_dout.valid(fs)) {
+      io.b_dout.valid(fs) := true.B
+      if (p.useFieldTag) io.b_dout.field.get := m_back.io.b_dout.field.get
+      io.b_dout.data.get(fs) := m_back.io.b_dout.data.get(fs)
     }.otherwise {
-      if (p.useDomeSlct) {
-        io.b_dout.valid(ds) := io.b_port.valid & (io.b_port.dome.get === ds.U)
+      if (p.useFieldSlct) {
+        io.b_dout.valid(fs) := io.b_port.valid & (io.b_port.field.get === fs.U)
       } else {
         io.b_dout.valid(0) := io.b_port.valid
       }  
-      if (p.useDomeTag) io.b_dout.dome.get := io.b_port.dome.get
-      io.b_dout.data.get(ds) := io.b_port.data
+      if (p.useFieldTag) io.b_dout.field.get := io.b_port.field.get
+      io.b_dout.data.get(fs) := io.b_port.data
     }
   } 
 
   // ******************************
   //        EXTERNAL ACCESS
   // ******************************
-  for (ds <- 0 until p.nDomeSlct) {
-    io.o_back(ds) := m_back.io.o_val.valid(ds)
+  for (fs <- 0 until p.nFieldSlct) {
+    io.o_back(fs) := m_back.io.o_val.valid(fs)
   }
 
   // ******************************
@@ -222,9 +222,9 @@ class Mb4sDataSReg(p: Mb4sDataParams) extends Module {
   val io = IO(new Bundle {  
     val b_port = Flipped(new Mb4sDataIO(p))
 
-    val o_back = Output(Vec(p.nDomeSlct, Bool()))
+    val o_back = Output(Vec(p.nFieldSlct, Bool()))
 
-    val i_slct = if (p.useDomeSlct) Some(Input(new SlctBus(p.nDome, p.nPart, 1))) else None 
+    val i_slct = if (p.useFieldSlct) Some(Input(new SlctBus(p.nField, p.nPart, 1))) else None 
     val b_sout = new GenSRVIO(p, UInt(0.W), UInt((p.nDataByte * 8).W))
   })  
 
@@ -236,7 +236,7 @@ class Mb4sDataSReg(p: Mb4sDataParams) extends Module {
   io.o_back := m_reg.io.o_back
 
   m_mux.io.b_din <> m_reg.io.b_dout
-  if (p.useDomeSlct) m_mux.io.i_slct.get := io.i_slct.get
+  if (p.useFieldSlct) m_mux.io.i_slct.get := io.i_slct.get
   io.b_sout <> m_mux.io.b_sout
 
   // ******************************

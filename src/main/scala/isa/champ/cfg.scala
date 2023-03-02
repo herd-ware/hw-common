@@ -188,7 +188,7 @@ class Identifier(nDataBit: Int, useRange: Boolean) extends Bundle {
 // ******************************
 //          CONFIGURATION
 // ******************************
-class DomeCfgBus(p: DomeCfgParams) extends Bundle {
+class FieldStructBus(p: FieldStructParams) extends Bundle {
   val status  = new Status(p.nDataBit, p.useRange)
   val id      = new Identifier(p.nDataBit, p.useRange)
   val entry   = UInt(p.nDataBit.W)
@@ -214,21 +214,21 @@ class DomeCfgBus(p: DomeCfgParams) extends Bundle {
 // ******************************
 //          REGISTER FILE
 // ******************************
-class RegFileBus(nChampReg: Int, p: DomeCfgParams) extends Bundle {
+class RegFileBus(nChampReg: Int, p: FieldStructParams) extends Bundle {
   val chf = UInt(log2Ceil(nChampReg).W)
   val phf = UInt(log2Ceil(nChampReg).W)
   val frv = Bool()
   val frhf = UInt(log2Ceil(nChampReg).W)
-  val hf = Vec(nChampReg, new DomeCfgBus(p))
+  val hf = Vec(nChampReg, new FieldStructBus(p))
 }
 
-class RegFilePtrBus(nChampReg: Int, p: DomeCfgParams) extends Bundle {
+class RegFilePtrBus(nChampReg: Int, p: FieldStructParams) extends Bundle {
   val valid = Bool()
   val addr = UInt(log2Ceil(nChampReg).W)
-  val hf = new DomeCfgBus(p)
+  val hf = new FieldStructBus(p)
 } 
 
-class RegFileStateBus(nChampReg: Int, p: DomeCfgParams) extends Bundle {
+class RegFileStateBus(nChampReg: Int, p: FieldStructParams) extends Bundle {
   val cur = new RegFilePtrBus(nChampReg, p)
   val prev = new RegFilePtrBus(nChampReg, p)
   val fr = new RegFilePtrBus(nChampReg, p)

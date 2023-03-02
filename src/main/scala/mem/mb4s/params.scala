@@ -29,20 +29,20 @@ import herd.common.mem.axi4.{Axi4Params, Axi4Config}
 trait Mb4sBaseParams extends GenParams {
   def debug: Boolean
 
-  def useDome: Boolean
-  def nDome: Int
-  def multiDome: Boolean
+  def useField: Boolean
+  def nField: Int
+  def multiField: Boolean
   def nPart: Int = 1
 
-  def nReadyBit: Int = nDomeSlct
+  def nReadyBit: Int = nFieldSlct
 }
 
 case class Mb4sBaseConfig (
   debug: Boolean,
   
-  useDome: Boolean,
-  nDome: Int,
-  multiDome: Boolean
+  useField: Boolean,
+  nField: Int,
+  multiField: Boolean
 ) extends Mb4sBaseParams
 
 // ******************************
@@ -62,9 +62,9 @@ trait Mb4sReqParams extends Mb4sBaseParams {
     }
   }
 
-  def useDome: Boolean
-  def nDome: Int
-  def multiDome: Boolean
+  def useField: Boolean
+  def nField: Int
+  def multiField: Boolean
 }
 
 case class Mb4sReqConfig (
@@ -74,9 +74,9 @@ case class Mb4sReqConfig (
   nAddrBit: Int,
   useAmo: Boolean,
   
-  useDome: Boolean,
-  nDome: Int,
-  multiDome: Boolean
+  useField: Boolean,
+  nField: Int,
+  multiField: Boolean
 ) extends Mb4sReqParams
 
 // ******************************
@@ -88,9 +88,9 @@ trait Mb4sDataParams extends Mb4sBaseParams {
   def nDataByte: Int
   def nDataBit: Int = nDataByte * 8
   
-  def useDome: Boolean
-  def nDome: Int
-  def multiDome: Boolean
+  def useField: Boolean
+  def nField: Int
+  def multiField: Boolean
 }
 
 case class Mb4sDataConfig (
@@ -98,9 +98,9 @@ case class Mb4sDataConfig (
   readOnly: Boolean,
   nDataByte: Int,
 
-  useDome: Boolean,
-  nDome: Int,
-  multiDome: Boolean
+  useField: Boolean,
+  nField: Int,
+  multiField: Boolean
 ) extends Mb4sDataParams
 
 // ******************************
@@ -114,9 +114,9 @@ trait Mb4sParams extends Mb4sReqParams with Mb4sDataParams {
   def useAmo: Boolean
   def nDataByte: Int
   
-  def useDome: Boolean
-  def nDome: Int
-  def multiDome: Boolean
+  def useField: Boolean
+  def nField: Int
+  def multiField: Boolean
 }
 
 case class Mb4sConfig (
@@ -127,9 +127,9 @@ case class Mb4sConfig (
   useAmo: Boolean,
   nDataByte: Int,
 
-  useDome: Boolean,
-  nDome: Int,
-  multiDome: Boolean
+  useField: Boolean,
+  nField: Int,
+  multiField: Boolean
 ) extends Mb4sParams
 
 // ******************************
@@ -173,7 +173,7 @@ trait Mb4sCrossbarParams extends GenParams {
       return nBus
     }
   }
-  def pSlave: Mb4sParams = MB4S.node(pMaster, multiDome)
+  def pSlave: Mb4sParams = MB4S.node(pMaster, multiField)
   
   def debug: Boolean  
   def readOnly: Boolean = pSlave.readOnly
@@ -184,14 +184,14 @@ trait Mb4sCrossbarParams extends GenParams {
   def nDataByte: Int = pSlave.nDataByte
   def nDataBit: Int = nDataByte * 8
   
-  def useDome: Boolean = pSlave.useDome
-  def nDome: Int = pSlave.nDome
-  def multiDome: Boolean
-  override def useDomeTag: Boolean = useDome && !multiDome && pSlave.useDomeTag
-  override def useDomeSlct: Boolean = (useDome && multiDome) || pSlave.useDomeSlct
-  override def nDomeSlct: Int = {    
-    if (useDomeSlct) {
-      return nDome
+  def useField: Boolean = pSlave.useField
+  def nField: Int = pSlave.nField
+  def multiField: Boolean
+  override def useFieldTag: Boolean = useField && !multiField && pSlave.useFieldTag
+  override def useFieldSlct: Boolean = (useField && multiField) || pSlave.useFieldSlct
+  override def nFieldSlct: Int = {    
+    if (useFieldSlct) {
+      return nField
     } else {
       return 1
     }
@@ -209,7 +209,7 @@ case class Mb4sCrossbarConfig (
   nBus: Int,
   
   debug: Boolean,  
-  multiDome: Boolean,
+  multiField: Boolean,
   nDepth: Int,
   useDirect: Boolean,
 ) extends Mb4sCrossbarParams
@@ -233,9 +233,9 @@ trait Mb4sAxi4Params extends GenParams {
   def nDataByte: Int = pMb4s.nDataByte
   def nDataBit: Int = nDataByte * 8
   
-  def useDome: Boolean = pMb4s.useDome
-  def nDome: Int = pMb4s.nDome
-  def multiDome: Boolean = pMb4s.multiDome
+  def useField: Boolean = pMb4s.useField
+  def nField: Int = pMb4s.nField
+  def multiField: Boolean = pMb4s.multiField
   def nPart: Int = 1
 
   def nDataDepth: Int

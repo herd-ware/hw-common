@@ -22,11 +22,11 @@ import chisel3.util._
 // ******************************
 //              CBO
 // ******************************
-class CboIO (nHart: Int, useDome: Boolean, nDome: Int, nAddrBit: Int) extends Bundle {
+class CboIO (nHart: Int, useField: Boolean, nField: Int, nAddrBit: Int) extends Bundle {
   val ready = Input(Bool())
   val valid = Output(Bool())
   val hart = Output(UInt(log2Ceil(nHart).W))
-  val dome = if (useDome) Some(Output(UInt(log2Ceil(nDome).W))) else None
+  val field = if (useField) Some(Output(UInt(log2Ceil(nField).W))) else None
   val op = Output(UInt(OP.NBIT.W))
   val sort = Output(UInt(SORT.NBIT.W))
   val block = Output(UInt(BLOCK.NBIT.W))
@@ -42,10 +42,10 @@ class CboIO (nHart: Int, useDome: Boolean, nDome: Int, nAddrBit: Int) extends Bu
   def data: Bool = (sort === SORT.A) | (sort === SORT.R) | (sort === SORT.W)
 }
 
-class CboBus (nHart: Int, useDome: Boolean, nDome: Int, nAddrBit: Int) extends Bundle {
+class CboBus (nHart: Int, useField: Boolean, nField: Int, nAddrBit: Int) extends Bundle {
   val valid = Bool()
   val hart = UInt(log2Ceil(nHart).W)
-  val dome = if (useDome) Some(UInt(log2Ceil(nDome).W)) else None
+  val field = if (useField) Some(UInt(log2Ceil(nField).W)) else None
   val op = UInt(OP.NBIT.W)
   val sort = UInt(SORT.NBIT.W)
   val block = UInt(BLOCK.NBIT.W)

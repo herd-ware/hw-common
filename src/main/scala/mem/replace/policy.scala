@@ -19,7 +19,7 @@ import scala._
 import chisel3._
 import chisel3.util._
 
-import herd.common.dome._
+import herd.common.field._
 
 
 class LineIO extends Bundle {
@@ -33,24 +33,24 @@ class AccessIO (nLine: Int) extends Bundle {
   val line = Input(UInt(log2Ceil(nLine).W))
 }
 
-class ReplaceIO (useDome: Boolean, nDome: Int, nLine: Int) extends Bundle {
+class ReplaceIO (useField: Boolean, nField: Int, nLine: Int) extends Bundle {
   val valid = Input(Bool())
-  val dome = if (useDome) Some(Input(UInt(log2Ceil(nDome).W))) else None
+  val field = if (useField) Some(Input(UInt(log2Ceil(nField).W))) else None
   val fixed = Input(UInt(log2Ceil(nLine).W))
   val done = Output(Bool())
   val line = Output(UInt(log2Ceil(nLine).W))
 }
 
-abstract class ReplacePolicy (useDome: Boolean, nDome: Int, nAccess: Int, nLine: Int) extends Module {
+abstract class ReplacePolicy (useField: Boolean, nField: Int, nAccess: Int, nLine: Int) extends Module {
   // ******************************
   //             IOs
   // ******************************
   val io = IO(new Bundle {
-    val b_rsrc = if (useDome) Some(new NRsrcIO(1, nDome, nLine)) else None
+    val b_rsrc = if (useField) Some(new NRsrcIO(1, nField, nLine)) else None
 
     val b_line = Vec(nLine, new LineIO())
     val b_acc = Vec(nAccess, new AccessIO(nLine))
-    val b_rep = new ReplaceIO(useDome, nDome, nLine)
+    val b_rep = new ReplaceIO(useField, nField, nLine)
   })
 
   // ******************************
@@ -60,9 +60,9 @@ abstract class ReplacePolicy (useDome: Boolean, nDome: Int, nAccess: Int, nLine:
   val w_line_av = Wire(Vec(nLine, Bool()))
 
   for (l <- 0 until nLine) {
-    if (useDome) {
+    if (useField) {
       w_line_flush(l) := io.b_line(l).flush | io.b_rsrc.get.state(l).flush
-      w_line_av(l) := io.b_line(l).av & ~w_line_flush(l) & io.b_rsrc.get.state(l).valid & (io.b_rep.dome.get === io.b_rsrc.get.state(l).dome)
+      w_line_av(l) := io.b_line(l).av & ~w_line_flush(l) & io.b_rsrc.get.state(l).valid & (io.b_rep.field.get === io.b_rsrc.get.state(l).field)
     } else {
       w_line_flush(l) := io.b_line(l).flush
       w_line_av(l) := io.b_line(l).av & ~w_line_flush(l)

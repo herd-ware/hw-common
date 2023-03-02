@@ -20,7 +20,7 @@ import chisel3._
 import chisel3.util._
 
 
-class LruPolicy (useDome: Boolean, nDome: Int, nAccess: Int, nLine: Int) extends ReplacePolicy(useDome, nDome, nAccess, nLine) {
+class LruPolicy (useField: Boolean, nField: Int, nAccess: Int, nLine: Int) extends ReplacePolicy(useField, nField, nAccess, nLine) {
   // ******************************
   //        HISTORY REGISTERS
   // ******************************
@@ -114,7 +114,7 @@ class LruPolicy (useDome: Boolean, nDome: Int, nAccess: Int, nLine: Int) extends
   // ******************************
   for (l <- 0 until nLine) {
     io.b_line(l).free := (r_counter(l) === 0.U)
-    if (useDome) io.b_rsrc.get.state(l).free := (r_counter(l) === 0.U)
+    if (useField) io.b_rsrc.get.state(l).free := (r_counter(l) === 0.U)
   }
 }
 

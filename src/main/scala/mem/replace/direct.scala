@@ -22,9 +22,9 @@ import chisel3.util._
 import herd.common.tools._
 
 
-class DirectPolicy (useDome: Boolean, nDome: Int, nAccess: Int, nLine: Int) extends ReplacePolicy(useDome, nDome, nAccess, nLine) {
+class DirectPolicy (useField: Boolean, nField: Int, nAccess: Int, nLine: Int) extends ReplacePolicy(useField, nField, nAccess, nLine) {
   require((isPow2(nLine)), "Set must have a power of 2 number of lines for Direct replace policy.")
-  require((!useDome || (nDome == 1)), "Direct replace ploicy is not possible with multiple domes.")
+  require((!useField || (nField == 1)), "Direct replace ploicy is not possible with multiple fields.")
 
   // ******************************
   //             POLICY
@@ -42,7 +42,7 @@ class DirectPolicy (useDome: Boolean, nDome: Int, nAccess: Int, nLine: Int) exte
   // ******************************
   for (l <- 0 until nLine) {
     io.b_line(l).free := true.B
-    if (useDome) io.b_rsrc.get.state(l).free := true.B
+    if (useField) io.b_rsrc.get.state(l).free := true.B
   }  
 }
 

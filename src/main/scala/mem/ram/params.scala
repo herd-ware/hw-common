@@ -20,17 +20,17 @@ import chisel3.util._
 import scala.math._
 
 import herd.common.gen._
-import herd.common.dome._
+import herd.common.field._
 import herd.common.mem.mb4s.{Mb4sParams, Mb4sMemParams, Mb4sConfig}
 
 
-trait RamCtrlParams extends DomeParams {
+trait RamCtrlParams extends FieldParams {
   def nPort: Int
   def debug: Boolean
 
-  def useDome: Boolean
-  def nDome: Int
-  def multiDome: Boolean
+  def useField: Boolean
+  def nField: Int
+  def multiField: Boolean
   def nPart: Int
 
   def isRom: Boolean
@@ -44,9 +44,9 @@ case class RamCtrlConfig (
   nPort: Int,
   debug: Boolean,
 
-  useDome: Boolean,
-  nDome: Int,
-  multiDome: Boolean,
+  useField: Boolean,
+  nField: Int,
+  multiField: Boolean,
   nPart: Int,
 
   isRom: Boolean,
@@ -63,9 +63,9 @@ trait Mb4sCtrlParams extends GenParams {
   def nAddrBit: Int = pPort.nAddrBit
   def nDataByte: Int = pPort.nDataByte
 
-  def useDome: Boolean = pPort.useDome
-  def nDome: Int = pPort.nDome
-  def multiDome: Boolean = pPort.multiDome
+  def useField: Boolean = pPort.useField
+  def nField: Int = pPort.nField
+  def multiField: Boolean = pPort.multiField
   def nPart: Int = pPort.nPart
 
   def useReqReg: Boolean
@@ -83,26 +83,26 @@ trait Mb4sRamParams extends RamCtrlParams with Mb4sMemParams {
   def nPort: Int = pPort.size
   def debug: Boolean
 
-  def useDome: Boolean = {
-    var use: Boolean = pPort(0).useDome    
+  def useField: Boolean = {
+    var use: Boolean = pPort(0).useField    
     for (po <- pPort) {
-      require((po.useDome == use), "All the ports must use domes to allow its support.")
+      require((po.useField == use), "All the ports must use fields to allow its support.")
     }
     return use
   }
-  def nDome: Int = {
-    var ndome: Int = pPort(0).nDome
+  def nField: Int = {
+    var nfield: Int = pPort(0).nField
     for (po <- pPort) {
-      if (po.nDome > ndome) {
-        ndome = po.nDome
+      if (po.nField > nfield) {
+        nfield = po.nField
       }
     }
-    return ndome
+    return nfield
   }
-  def multiDome: Boolean = {
-    var multi: Boolean = pPort(0).multiDome
+  def multiField: Boolean = {
+    var multi: Boolean = pPort(0).multiField
     for (po <- pPort) {
-      if (po.multiDome) {
+      if (po.multiField) {
         multi = true
       }
     }

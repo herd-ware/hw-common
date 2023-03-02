@@ -13,15 +13,15 @@
  */
 
 
-package herd.common.dome
+package herd.common.field
 
 import chisel3._
 import chisel3.util._
 
 
-object DomeConfigBase extends DomeConfig (
-  useDome = true,
-  nDome = 2,
-  multiDome = true,
+object FieldConfigBase extends FieldConfig (
+  useField = true,
+  nField = 2,
+  multiField = true,
   nPart = 2
 )
