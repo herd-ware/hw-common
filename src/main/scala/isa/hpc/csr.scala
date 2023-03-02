@@ -3,7 +3,7 @@
  * Created Date: 2023-02-25 12:54:02 pm                                        *
  * Author: Mathieu Escouteloup                                                 *
  * -----                                                                       *
- * Last Modified: 2023-02-25 09:38:34 pm                                       *
+ * Last Modified: 2023-03-02 06:39:58 pm                                       *
  * Modified By: Mathieu Escouteloup                                            *
  * -----                                                                       *
  * License: See LICENSE.md                                                     *
@@ -13,7 +13,7 @@
  */
 
 
-package herd.common.isa.count
+package herd.common.isa.hpc
 
 import chisel3._
 import chisel3.util._
@@ -45,6 +45,30 @@ object CSR {
 // ******************************
 //             BUS
 // ******************************
+class HpcInstrBus extends Bundle {
+  val instret = Bool()
+  val alu = Bool()
+  val ld = Bool()
+  val st = Bool()
+  val br = Bool()
+  val mispred = Bool()
+}
+
+class HpcPipelineBus extends Bundle {
+  val instret = UInt(64.W)
+  val alu = UInt(64.W)
+  val ld = UInt(64.W)
+  val st = UInt(64.W)
+  val br = UInt(64.W)
+  val mispred = UInt(64.W)
+}
+
+class HpcMemoryBus extends Bundle {
+  val l1imiss = UInt(64.W)
+  val l1dmiss = UInt(64.W)
+  val l2miss = UInt(64.W)
+}
+
 class CsrBus extends Bundle {
   val cycle     = UInt(64.W)
   val time      = UInt(64.W)
