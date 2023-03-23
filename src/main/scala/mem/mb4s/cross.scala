@@ -3,7 +3,7 @@
  * Created Date: 2023-02-25 12:54:02 pm                                        *
  * Author: Mathieu Escouteloup                                                 *
  * -----                                                                       *
- * Last Modified: 2023-03-02 01:51:03 pm                                       *
+ * Last Modified: 2023-03-22 02:26:19 pm                                       *
  * Modified By: Mathieu Escouteloup                                            *
  * -----                                                                       *
  * License: See LICENSE.md                                                     *
@@ -346,37 +346,6 @@ class Mb4sCrossbarReq (p: Mb4sCrossbarParams) extends Module {
   if (p.debug) {
     dontTouch(io.b_snode)
     dontTouch(io.b_mnode)
-    if (p.useMem) {
-      for (me <- 0 until p.nMem) {
-        var v_start: String = "%08x".format(BigInt(p.pMem(me).nAddrBase, 16))
-        var v_end: String = "%08x".format(BigInt(p.pMem(me).nAddrBase, 16) + BigInt(p.pMem(me).nByte, 16))
-
-        if (p.nAddrBit > 32) {
-          v_start = v_start.takeRight(16)
-          v_end = v_end.takeRight(16)
-        } else {
-          v_start = v_start.takeRight(8)
-          v_end = v_end.takeRight(8)
-        }
-
-        println(("Mem " + me + " range : 0x" + v_start + " | 0x" + v_end))
-      }
-
-      for (d <- 0 until p.nDefault) {
-        var v_start: String = ""
-        var v_end: String = ""
-
-        if (p.nDataBit == 64) {
-          v_start = "0000000000000000"
-          v_end = "ffffffffffffffff"
-        } else {
-          v_start = "00000000"
-          v_end = "ffffffff"
-        }
-
-        println(("Mem " + (p.nMem + d) + " range : 0x" + v_start + " | 0x" + v_end))
-      }
-    }
   } 
 }
 
@@ -890,6 +859,47 @@ class Mb4sCrossbar (p: Mb4sCrossbarParams) extends Module {
       io.b_m(s) <> io.b_s(s)
     }    
   }
+
+  // ******************************
+  //            REPORT
+  // ******************************
+  def report (name: String): Unit = {
+    println("******************************")
+    println("Crossbar: " + name)
+    if (p.useMem) {
+      for (me <- 0 until p.nMem) {
+        var v_start: String = "%08x".format(BigInt(p.pMem(me).nAddrBase, 16))
+        var v_end: String = "%08x".format(BigInt(p.pMem(me).nAddrBase, 16) + BigInt(p.pMem(me).nByte, 16))
+
+        if (p.nAddrBit > 32) {
+          v_start = v_start.takeRight(16)
+          v_end = v_end.takeRight(16)
+        } else {
+          v_start = v_start.takeRight(8)
+          v_end = v_end.takeRight(8)
+        }
+
+        println(("Range " + me + ": 0x" + v_start + " | 0x" + v_end))
+      }
+
+      for (d <- 0 until p.nDefault) {
+        var v_start: String = ""
+        var v_end: String = ""
+
+        if (p.nDataBit == 64) {
+          v_start = "0000000000000000"
+          v_end = "ffffffffffffffff"
+        } else {
+          v_start = "00000000"
+          v_end = "ffffffff"
+        }
+
+        println(("Range " + (p.nMem + d) + ": 0x" + v_start + " | 0x" + v_end))
+      }
+    }
+    println("******************************")
+  }
+
 
   // ******************************
   //             DEBUG
