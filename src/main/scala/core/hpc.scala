@@ -1,10 +1,10 @@
 /*
- * File: hpc.scala
+ * File: hpc.scala                                                             *
  * Created Date: 2023-02-25 12:54:02 pm                                        *
  * Author: Mathieu Escouteloup                                                 *
  * -----                                                                       *
- * Last Modified: 2023-03-03 06:52:00 pm
- * Modified By: Mathieu Escouteloup
+ * Last Modified: 2023-04-03 01:02:46 pm                                       *
+ * Modified By: Mathieu Escouteloup                                            *
  * -----                                                                       *
  * License: See LICENSE.md                                                     *
  * Copyright (c) 2023 HerdWare                                                *
@@ -24,7 +24,7 @@ import chisel3.util._
 // ******************************
 class HpcBus extends Bundle {
   val alu = UInt(64.W)
-  val br = UInt(64.W)
+  val bru = UInt(64.W)
   val cycle = UInt(64.W)
   val instret = UInt(64.W)
   val l1ihit = UInt(64.W)
@@ -46,10 +46,11 @@ class HpcBus extends Bundle {
   val call = UInt(64.W)
   val jal = UInt(64.W)
   val jalr = UInt(64.W)
+  val srcdep = UInt(64.W)
   val cflush = UInt(64.W)
+
   val efetch = UInt(64.W)
   val ecommit = UInt(64.W)
-  val srcdep = UInt(64.W)
 
   val hfflush = UInt(64.W)
   val hfswitch = UInt(64.W)
@@ -63,9 +64,15 @@ class HpcInstrBus extends Bundle {
   val alu = Bool()
   val ld = Bool()
   val st = Bool()
-  val br = Bool()
+  val bru = Bool()
   val mispred = Bool()
   val rdcycle = Bool()
+
+  val ret = Bool()
+  val call = Bool()
+  val jal = Bool()
+  val jalr = Bool()
+  val cflush = Bool()
 }
 
 class HpcCacheBus extends Bundle {
@@ -79,9 +86,16 @@ class HpcPipelineBus extends Bundle {
   val alu = UInt(64.W)
   val ld = UInt(64.W)
   val st = UInt(64.W)
-  val br = UInt(64.W)
+  val bru = UInt(64.W)
   val mispred = UInt(64.W)
-  val rdcycle = UInt(64.W)
+  val rdcycle = UInt(64.W)  
+  
+  val ret = UInt(64.W)
+  val call = UInt(64.W)
+  val jal = UInt(64.W)
+  val jalr = UInt(64.W)
+  val srcdep = UInt(64.W)
+  val cflush = UInt(64.W)
 }
 
 class HpcMemoryBus extends Bundle {
