@@ -3,7 +3,7 @@
  * Created Date: 2023-02-25 12:54:02 pm                                        *
  * Author: Mathieu Escouteloup                                                 *
  * -----                                                                       *
- * Last Modified: 2023-04-20 01:37:26 pm                                       *
+ * Last Modified: 2023-04-21 10:14:31 am                                       *
  * Modified By: Mathieu Escouteloup                                            *
  * -----                                                                       *
  * License: See LICENSE.md                                                     *
@@ -62,23 +62,31 @@ object CSR {
 //           REGISTERS
 // ******************************
 // ------------------------------
-//            MACHINE
+//              ALL
 // ------------------------------
-class CsrMstatusBus(nDataBit: Int) extends Bundle {
+class CsrXstatusBus(nDataBit: Int) extends Bundle {
   val mie = Bool()
-  val mpp = Bool()
-  val mpie = UInt(2.W)
+  val mpie = Bool()
+  val mpp = UInt(2.W)
 
   def toUInt: UInt = {
     if (nDataBit == 64) {
-      return Cat(mpie, 0.U(3.W), mpp, 0.U(3.W), mie, 0.U(3.W))
+      return Cat(mpp, 0.U(3.W), mpie, 0.U(3.W), mie, 0.U(3.W))
     } else {
-      return Cat(mpie, 0.U(3.W), mpp, 0.U(3.W), mie, 0.U(3.W))
+      return Cat(mpp, 0.U(3.W), mpie, 0.U(3.W), mie, 0.U(3.W))
     }    
+  }
+
+  def m: UInt = {
+    if (nDataBit == 64) {
+      return Cat(mpp, 0.U(3.W), mpie, 0.U(3.W), mie, 0.U(3.W))
+    } else {
+      return Cat(mpp, 0.U(3.W), mpie, 0.U(3.W), mie, 0.U(3.W))
+    } 
   }
 }
 
-class CsrMisaBus(nDataBit: Int) extends Bundle {
+class CsrXisaBus(nDataBit: Int) extends Bundle {
   val a = Bool()
   val b = Bool()
   val i = Bool()
@@ -90,12 +98,19 @@ class CsrMisaBus(nDataBit: Int) extends Bundle {
   }
 }
 
+// ------------------------------
+//            MACHINE
+// ------------------------------
 class CsrMtvecBus(nDataBit: Int) extends Bundle {
   val mode = UInt(2.W)
   val base = (UInt((nDataBit - 2).W))
 
   def toUInt: UInt = {
     return Cat(base, mode)  
+  }
+
+  def addr: UInt = {
+    return Cat(base, 0.U(2.W))
   }
 }
 
@@ -105,7 +120,7 @@ class CsrMieBus(nDataBit: Int) extends Bundle {
   val meie = Bool()
 
   def toUInt: UInt = {
-    return Cat(0.U(3.W), meie, 0.U(3.W), mtie, 0.U(3.W), msie)  
+    return Cat(0.U((nDataBit - 9).W), meie, 0.U(3.W), mtie, 0.U(3.W), msie)  
   }
 }
 
@@ -130,7 +145,7 @@ class CsrMipBus(nDataBit: Int) extends Bundle {
 
 class CsrMenvcfgBus(nDataBit: Int) extends Bundle {
   val fiom = Bool()
-  val cbie = Bool()
+  val cbie = UInt(2.W)
   val cbcfe = Bool()
   val cbze = Bool()
 
@@ -154,46 +169,14 @@ class CsrBus(nDataBit: Int) extends Bundle {
   // ------------------------------
   //       MACHINE TRAP SETUP
   // ------------------------------
-  val mstatus   = UInt(64.W)
-  val misa      = UInt(nDataBit.W)
-  val medeleg   = UInt(nDataBit.W)
-  val mideleg   = UInt(nDataBit.W)
-  val mtvec     = UInt(nDataBit.W)
-  val mie       = UInt(nDataBit.W)
-  
-  // ------------------------------
-  //      MACHINE TRAP HANDLING
-  // ------------------------------  
-  val mscratch  = UInt(nDataBit.W)
-  val mepc      = UInt(nDataBit.W)
-  val mcause    = UInt(nDataBit.W)
-  val mtval     = UInt(nDataBit.W) 
-  val mip       = UInt(nDataBit.W)
+  val cp        = UInt(2.W)
+  val xstatus   = new CsrXstatusBus(nDataBit)
+  val xisa      = new CsrXisaBus(nDataBit)
 
-  // ------------------------------
-  //     MACHINE CONFIGURATION
-  // ------------------------------
-  val menvcfg   = UInt(64.W)
-}
-
-class Csr2Bus(nDataBit: Int) extends Bundle {
-  // ------------------------------
-  //         MACHINE INFOS
-  // ------------------------------
-  val mvendorid = UInt(32.W)
-  val marchid   = UInt(nDataBit.W)
-  val mimpid    = UInt(nDataBit.W) 
-  val mhartid   = UInt(nDataBit.W)
-
-  // ------------------------------
-  //       MACHINE TRAP SETUP
-  // ------------------------------
-  val mstatus   = new CsrMstatusBus(nDataBit)
-  val misa      = new CsrMisaBus(nDataBit)
   val medeleg   = Vec(nDataBit, Bool())
   val mideleg   = Vec(nDataBit, Bool())
-  val mtvec     = new CsrMtvecBus(nDataBit)
   val mie       = new CsrMieBus(nDataBit)
+  val mtvec     = new CsrMtvecBus(nDataBit)
   
   // ------------------------------
   //      MACHINE TRAP HANDLING
@@ -208,4 +191,42 @@ class Csr2Bus(nDataBit: Int) extends Bundle {
   //     MACHINE CONFIGURATION
   // ------------------------------
   val menvcfg   = new CsrMenvcfgBus(nDataBit)
+}
+
+// ******************************
+//             DEBUG
+// ******************************
+class CsrDbgBus(nDataBit: Int) extends Bundle {
+  // ------------------------------
+  //         MACHINE INFOS
+  // ------------------------------
+  val mvendorid = UInt(32.W)
+  val marchid   = UInt(nDataBit.W)
+  val mimpid    = UInt(nDataBit.W) 
+  val mhartid   = UInt(nDataBit.W)
+
+  // ------------------------------
+  //       MACHINE TRAP SETUP
+  // ------------------------------
+  val cp        = UInt(2.W)
+  val mstatus   = UInt(64.W)
+  val misa      = UInt(nDataBit.W)
+  val medeleg   = UInt(nDataBit.W)
+  val mideleg   = UInt(nDataBit.W)
+  val mie       = UInt(nDataBit.W)
+  val mtvec     = UInt(nDataBit.W)
+  
+  // ------------------------------
+  //      MACHINE TRAP HANDLING
+  // ------------------------------  
+  val mscratch  = UInt(nDataBit.W)
+  val mepc      = UInt(nDataBit.W)
+  val mcause    = UInt(nDataBit.W)
+  val mtval     = UInt(nDataBit.W) 
+  val mip       = UInt(nDataBit.W)
+
+  // ------------------------------
+  //     MACHINE CONFIGURATION
+  // ------------------------------
+  val menvcfg   = UInt(64.W)
 }
